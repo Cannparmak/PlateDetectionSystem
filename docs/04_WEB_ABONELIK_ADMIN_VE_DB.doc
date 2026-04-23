@@ -1,0 +1,401 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Dokuman 04: Web Uygulamasi, Arac Bazli Abonelik, Admin Paneli ve Veritabani Tasarimi
+Surum: v1.0
+
+-------------------------------------------------------------------
+1) DOKUMAN AMACI
+-------------------------------------------------------------------
+Bu dokumanin amaci:
+- web tabanli sistemin modul yapisini netlestirmek,
+- arac bazli abonelik modelini tanimlamak,
+- admin paneli yonetim kapsamlarini belirlemek,
+- veritabani semasini net cizmek,
+- OCR sonucu ile abonelik/yetki kontrolunu birlestirmektir.
+
+Not:
+Bu dokumanda teknoloji secimi esnek tutulur.
+Oncelik: dogru is kurali ve veri modeli.
+
+-------------------------------------------------------------------
+2) IS KURALLARI (DEGISMEYECEK TEMEL KURALLAR)
+-------------------------------------------------------------------
+Kural-1:
+Abonelik kullaniciya degil, araca baglidir.
+
+Kural-2:
+Bir kullanici birden fazla arac ekleyebilir.
+
+Kural-3:
+Ayni plaka sistemde tekil olmalidir (aktif kayitta duplicate olmamali).
+
+Kural-4:
+Gecis karari sadece aktif abonelik + durum kontrolu ile verilir.
+
+Kural-5:
+Gecis sonucu:
+- yetkili: 1 (yesil LED)
+- yetkisiz: 0 (kirmizi LED)
+
+-------------------------------------------------------------------
+3) SISTEM MODULLERI
+-------------------------------------------------------------------
+M1 - Auth Modulu
+- kayit, giris, oturum, sifre islemleri
+
+M2 - Kullanici Arac Yonetimi
+- arac ekleme/silme/guncelleme
+- plaka ve ulke bilgisi
+
+M3 - Abonelik Modulu
+- arac bazli paket secimi
+- fake odeme sonrasi aktivasyon
+- baslangic ve bitis tarihi yonetimi
+
+M4 - Admin Panel
+- kullanici listeleme/filtreleme
+- araclarin kontrolu
+- abonelikleri manuel aktif/pasif yapma
+- olay (gecis) kayitlarini izleme
+
+M5 - Gecis Kontrol Modulu (ALPR Integrasyon)
+- OCR'dan gelen plaka metni ile sorgulama
+- karar motoru (1/0)
+- donanim cikisina komut gonderme
+
+M6 - Log ve Raporlama
+- gecis kayitlari
+- basarisiz okuma kayitlari
+- abonelik ihlali/istisna kayitlari
+
+-------------------------------------------------------------------
+4) KULLANICI ROLLERI
+-------------------------------------------------------------------
+Role: USER
+- hesap yonetimi
+- kendi araclarini gorur
+- kendi aracina abonelik satin alir
+- odeme gecmisi gorur (fake odeme dahil)
+
+Role: ADMIN
+- tum kullanicilari gorur/yonetir
+- tum araclari gorur/yonetir
+- tum abonelikleri gorur/yonetir
+- gecis loglarini gorur
+
+Role: SYSTEM (servis hesabi)
+- OCR pipeline'dan gelen istekleri API'ye iletebilir
+
+-------------------------------------------------------------------
+5) WEB EKRANLARI (MINIMUM MVP)
+-------------------------------------------------------------------
+Kullanici Tarafi:
+1) Kayit / Giris
+2) Dashboard
+3) Araclarim (liste + yeni arac ekle)
+4) Arac Detay (abonelik durumu)
+5) Paket Secimi
+6) Fake Odeme Ekrani
+7) Abonelik Gecmisi
+
+Admin Tarafi:
+1) Admin Giris
+2) Kullanici Yonetimi
+3) Arac Yonetimi
+4) Abonelik Yonetimi
+5) Gecis Loglari
+6) Sistem Durum (opsiyonel)
+
+-------------------------------------------------------------------
+6) VERITABANI TASARIMI (TABLOLAR)
+-------------------------------------------------------------------
+T1: users
+- id (PK)
+- full_name
+- email (unique)
+- password_hash
+- role (USER/ADMIN)
+- is_active
+- created_at
+- updated_at
+
+T2: vehicles
+- id (PK)
+- user_id (FK -> users.id)
+- plate_text (normalized)
+- country_code (TR, DE, FR, ...)
+- plate_display (ham gorunur format)
+- is_active
+- created_at
+- updated_at
+
+Kisit:
+- unique(plate_text, country_code)  [aktif kayit senaryosuna gore]
+
+T3: subscription_plans
+- id (PK)
+- plan_name
+- duration_days
+- price
+- currency
+- is_active
+- created_at
+
+T4: vehicle_subscriptions
+- id (PK)
+- vehicle_id (FK -> vehicles.id)
+- plan_id (FK -> subscription_plans.id)
+- start_date
+- end_date
+- status (PENDING/ACTIVE/EXPIRED/CANCELED)
+- created_at
+- updated_at
+
+T5: payments_fake
+- id (PK)
+- vehicle_subscription_id (FK)
+- amount
+- currency
+- payment_status (SUCCESS/FAILED/PENDING)
+- payment_ref
+- paid_at
+- created_at
+
+T6: access_events
+- id (PK)
+- event_time
+- source_type (CAMERA/SCREENSHOT)
+- plate_raw
+- plate_clean
+- country_candidate
+- ocr_confidence
+- final_score
+- decision (1/0)
+- reason_code
+- matched_vehicle_id (nullable)
+- matched_subscription_id (nullable)
+- led_signal (GREEN/RED)
+- image_path (opsiyonel)
+- created_at
+
+T7: system_settings (opsiyonel)
+- id (PK)
+- key
+- value
+- updated_at
+
+-------------------------------------------------------------------
+7) ABONELIK IS AKISI (ARAC BAZLI)
+-------------------------------------------------------------------
+Adim-1:
+Kullanici arac ekler (plate_text + country_code).
+
+Adim-2:
+Kullanici araci secip paket secer.
+
+Adim-3:
+Fake odeme ekrani acilir.
+
+Adim-4:
+Odeme SUCCESS ise vehicle_subscriptions.status = ACTIVE
+ve start/end tarihleri plan suresine gore atanir.
+
+Adim-5:
+Sistem gecis sorgularinda bu arac icin ACTIVE ve tarih araligini kontrol eder.
+
+-------------------------------------------------------------------
+8) GECIS KARAR MOTORU (CORE LOGIC)
+-------------------------------------------------------------------
+Girdi:
+- plate_clean
+- country_candidate
+- final_score
+
+Karar adimlari:
+1) final_score esik altiysa:
+   decision = 0
+   reason = OCR_LOW_CONFIDENCE
+
+2) vehicles tablosunda eslesen kayit yoksa:
+   decision = 0
+   reason = VEHICLE_NOT_REGISTERED
+
+3) eslesen arac var ama aktif abonelik yoksa:
+   decision = 0
+   reason = SUBSCRIPTION_NOT_ACTIVE
+
+4) aktif abonelik varsa:
+   decision = 1
+   reason = AUTHORIZED
+
+5) sonuc access_events'e yazilir.
+6) led_signal:
+   decision 1 -> GREEN
+   decision 0 -> RED
+
+-------------------------------------------------------------------
+9) API UCLARI (ORNEK)
+-------------------------------------------------------------------
+Auth:
+- POST /api/auth/register
+- POST /api/auth/login
+
+User-Vehicle:
+- GET /api/vehicles
+- POST /api/vehicles
+- PUT /api/vehicles/{id}
+- DELETE /api/vehicles/{id}
+
+Subscription:
+- GET /api/plans
+- POST /api/subscriptions/create
+- POST /api/payments/fake-confirm
+
+Access/ALPR:
+- POST /api/access/check-plate
+  body:
+  {
+    "plate_clean": "34ABC123",
+    "country_candidate": "TR",
+    "ocr_confidence": 0.88,
+    "final_score": 0.79
+  }
+
+Admin:
+- GET /api/admin/users
+- GET /api/admin/vehicles
+- GET /api/admin/subscriptions
+- GET /api/admin/access-events
+
+-------------------------------------------------------------------
+10) PLAKA NORMALIZASYON KURALI (DB ONCESI)
+-------------------------------------------------------------------
+Arac ekleme ve OCR sorgusunda ayni kural kullanilmali:
+- uppercase
+- sadece A-Z0-9 (ve gerekiyorsa ulke ozel karakter haritasi)
+- bosluk ve tire temizligi
+
+Neden:
+- "34 AB 1234" ve "34AB1234" ayni kayda dusmeli.
+
+-------------------------------------------------------------------
+11) GUVENLIK VE YETKI
+-------------------------------------------------------------------
+Minimum guvenlik:
+- sifreler hashli saklanir (plaintext yasak)
+- JWT veya session tabanli auth
+- admin endpointleri rol kontrolu ister
+- API rate limit (ozellikle access/check-plate)
+- loglarda hassas veri minumum tutulur
+
+-------------------------------------------------------------------
+12) YANLIS POZITIF / YANLIS NEGATIF YONETIMI
+-------------------------------------------------------------------
+Yanlis pozitif (yetkisiz ama 1 cikti):
+- kritik risk
+- cozüm: confidence + format + zaman penceresi kontrolu
+
+Yanlis negatif (yetkili ama 0 cikti):
+- kullanici deneyimi riski
+- cozüm: kisa sureli tekrar deneme, son 3 okuma voting
+
+Oneri:
+- tek frame'e gore bariyer/LED karari verme
+- micro-window (ornek 1-2 sn) toplu karar kullan
+
+-------------------------------------------------------------------
+13) LOG VE DENETIM
+-------------------------------------------------------------------
+Zorunlu loglar:
+- auth olaylari
+- abonelik aktivasyon
+- odeme sonucu
+- gecis karari ve reason_code
+
+Admin panelde filtreler:
+- tarih araligi
+- plaka
+- karar (1/0)
+- reason_code
+
+-------------------------------------------------------------------
+14) KABUL KRITERLERI (BU DOKUMAN)
+-------------------------------------------------------------------
+[ ] users/vehicles/vehicle_subscriptions tablolari olustu
+[ ] arac bazli abonelik akisi calisiyor
+[ ] fake odeme SUCCESS -> ACTIVE gecisi var
+[ ] /api/access/check-plate karari 1/0 donebiliyor
+[ ] access_events logu yaziliyor
+[ ] admin listeleri calisiyor
+
+-------------------------------------------------------------------
+15) TEKNOLOJI SECIMI (ONERI)
+-------------------------------------------------------------------
+Backend:
+- FastAPI veya Django (hizli API icin FastAPI uygun)
+
+Frontend:
+- React + basit admin tema
+
+DB:
+- MySQL (onerilen)
+- MSSQL alternatif
+- MongoDB sadece log/analitik icin opsiyonel
+
+Not:
+Teknoloji secimi dokuman-05'te netlestirilecek.
+
+-------------------------------------------------------------------
+16) SONRAKI DOKUMAN
+-------------------------------------------------------------------
+Dokuman-05 kapsam:
+- Donanim simulasyonu (LED kirmizi/yesil)
+- Arduino/seri haberlesme protokolu
+- API -> donanim komut esleme
+- hata ve timeout senaryolari
+
+Dokuman-04 Sonu
+
+-------------------------------------------------------------------
+17) KESIN TEKNOLOJI SECIMI (BU SURUM)
+-------------------------------------------------------------------
+Bu bolumde onceki "oneri" durumu kesin karara cevrilmistir:
+
+| Katman | Secim |
+|---|---|
+| Backend API | FastAPI |
+| Frontend | React |
+| Veritabani | MySQL |
+| ORM | SQLAlchemy (onerilen) |
+| Migration | Alembic (onerilen) |
+
+Not:
+- MSSQL kullanilacaksa veri tipleri ve migration scriptleri MSSQL'e gore uyarlanir.
+- Uretim benzeri tum testlerde MySQL esas alinacaktir.
+
+-------------------------------------------------------------------
+18) DB INDEX VE BUTUNLUK KURALLARI (ZORUNLU)
+-------------------------------------------------------------------
+Gecis kontrolunun hizli calismasi icin:
+
+Zorunlu indexler:
+- vehicles(country_code, plate_text)
+- vehicle_subscriptions(vehicle_id, status, end_date)
+- access_events(event_time)
+
+Zorunlu butunluk kurallari:
+- users.email unique
+- vehicles (country_code + plate_text) unique
+- payment SUCCESS olmadan ACTIVE abonelik olusmaz
+
+Transactional kural:
+- fake odeme SUCCESS ve ACTIVE abonelik yazimi tek transaction icinde yapilir.
+
+-------------------------------------------------------------------
+19) API SLA HEDEFI (MVP)
+-------------------------------------------------------------------
+/api/access/check-plate endpointi icin:
+- hedef ortalama yanit suresi: <= 300 ms (DB sorgu kismi)
+- p95 hedef: <= 600 ms
+
+Not:
+- OCR suresi bu SLA disinda ayrica olculecektir.

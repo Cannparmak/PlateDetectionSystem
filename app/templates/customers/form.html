@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Müşteri Düzenle' if customer else 'Yeni Müşteri' }}{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="/customers" class="text-[#8c909f] hover:text-white transition-colors">
+    <span class="material-symbols-outlined text-xl">arrow_back</span>
+  </a>
+  <h1 class="text-2xl font-bold text-white">
+    {{ 'Müşteri Düzenle' if customer else 'Yeni Müşteri' }}
+  </h1>
+</div>
+<p class="text-[#8c909f] text-sm ml-9">
+  {% if customer %}{{ customer.full_name }} · #{{ customer.id }}{% else %}Yeni müşteri kaydı oluştur{% endif %}
+</p>
+
+<div class="max-w-2xl">
+  {% if error %}
+  <div class="p-4 bg-error-container/20 rounded-2xl text-error text-sm flex items-center gap-2 mb-6">
+    <span class="material-symbols-outlined text-base">error</span>{{ error }}
+  </div>
+  {% endif %}
+
+  <form method="post"
+        action="{{ '/customers/' + customer.id|string + '/edit' if customer else '/customers/new' }}"
+        class="space-y-5">
+
+    <!-- Kişisel Bilgiler -->
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Kişisel Bilgiler</h3>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Ad *</label>
+          <input type="text" name="first_name" required
+                 value="{{ (form.first_name if form else customer.first_name) if (form or customer) else '' }}"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+                 placeholder="Ahmet"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Soyad *</label>
+          <input type="text" name="last_name" required
+                 value="{{ (form.last_name if form else customer.last_name) if (form or customer) else '' }}"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+                 placeholder="Yılmaz"/>
+        </div>
+      </div>
+
+      <!-- TC Kimlik No — zorunlu -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
+          T.C. Kimlik No *
+        </label>
+        <input type="text" name="tc_no" id="tc_no" required
+               maxlength="11"
+               inputmode="numeric"
+               value="{{ (form.tc_no if form else customer.tc_no) if (form or customer) else '' }}"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+               placeholder="12345678901"
+               oninput="this.value=this.value.replace(/\D/g,'').slice(0,11); validateTc(this)"/>
+        <div class="flex items-center justify-between mt-1">
+          <span id="tc_hint" class="text-[10px] transition-colors" style="color:#8c909f">
+            11 haneli, 0 ile başlamaz
+          </span>
+          <span id="tc_counter" class="text-[10px] font-mono tabular-nums transition-colors" style="color:#8c909f">
+            {{ ((form.tc_no if form else customer.tc_no) or '') | length }}/11
+          </span>
+        </div>
+      </div>
+
+      <!-- Telefon — zorunlu, seçilebilir ülke kodlu -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
+          Telefon *
+        </label>
+        <div class="flex gap-2">
+          <select name="phone_code" id="phone_code"
+                  onchange="updatePhoneHint()"
+                  class="bg-[#191b22] rounded-xl ghost-border px-3 py-3 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30 shrink-0 cursor-pointer">
+            {% for code, label in phone_codes %}
+            <option value="{{ code }}" {% if code == selected_code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <input type="tel" name="phone" id="phone_local" required
+                 value="{{ phone_local }}"
+                 inputmode="numeric"
+                 class="flex-1 bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+                 placeholder="5321234567"
+                 oninput="this.value=this.value.replace(/\D/g,''); updatePhoneHint()"/>
+        </div>
+        <p id="phone_hint" class="text-[10px] text-[#8c909f] mt-1"></p>
+      </div>
+
+      <!-- E-posta -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">E-posta</label>
+        <input type="email" name="email"
+               value="{{ (form.email if form else customer.email) if (form or customer) else '' }}"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+               placeholder="ahmet@email.com"/>
+      </div>
+    </div>
+
+    {% if not customer %}
+    <!-- Araç / Plaka — yeni müşteride zorunlu -->
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Araç Bilgisi</h3>
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
+          Plaka *
+        </label>
+        <input type="text" name="plate_number" required
+               value="{{ form.plate_number if form else '' }}"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 uppercase"
+               placeholder="34 ABC 1234"
+               oninput="this.value = this.value.toUpperCase()"/>
+        <p class="text-[10px] text-[#8c909f] mt-1">
+          Müşteri oluşturulduğunda bu plaka otomatik araç olarak eklenir.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Ek Bilgiler -->
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Ek Bilgiler</h3>
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Adres</label>
+        <textarea name="address" rows="2"
+                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                  placeholder="Müşteri adresi...">{{ (form.address if form else customer.address) if (form or customer) else '' }}</textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Notlar</label>
+        <textarea name="notes" rows="2"
+                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                  placeholder="Özel notlar...">{{ (form.notes if form else customer.notes) if (form or customer) else '' }}</textarea>
+      </div>
+      {% if not customer %}
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
+          Portal Şifresi <span class="normal-case font-normal">(opsiyonel)</span>
+        </label>
+        <input type="password" name="portal_password" minlength="6"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
+               placeholder="Müşteri portal girişi için şifre"/>
+        <p class="text-xs text-[#8c909f] mt-1.5">Boş bırakılırsa müşteri portalına giriş yapamaz.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="flex gap-3">
+      <a href="{{ '/customers/' + customer.id|string if customer else '/customers' }}"
+         class="flex-1 h-12 flex items-center justify-center rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+        İptal
+      </a>
+      <button type="submit"
+              class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+        {{ 'Güncelle' if customer else 'Kaydet' }}
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── TC Kimlik doğrulaması ─────────────────────────────────────────
+  function tcChecksum(tc) {
+    if (tc.length !== 11 || tc[0] === '0') return false;
+    const d = tc.split('').map(Number);
+    const c10 = ((d[0]+d[2]+d[4]+d[6]+d[8])*7 - (d[1]+d[3]+d[5]+d[7])) % 10;
+    const c11 = (d[0]+d[1]+d[2]+d[3]+d[4]+d[5]+d[6]+d[7]+d[8]+d[9]) % 10;
+    return d[9] === ((c10 + 10) % 10) && d[10] === c11;
+  }
+
+  function validateTc(input) {
+    const counter = document.getElementById('tc_counter');
+    const hint    = document.getElementById('tc_hint');
+    const val = input.value;
+    const len = val.length;
+
+    counter.textContent = len + '/11';
+
+    if (len === 0) {
+      counter.style.color = hint.style.color = '#8c909f';
+      hint.textContent = '11 haneli, 0 ile başlamaz';
+      return;
+    }
+    if (len < 11) {
+      counter.style.color = '#facc15';
+      hint.style.color    = '#8c909f';
+      hint.textContent    = '11 haneli, 0 ile başlamaz';
+      return;
+    }
+    if (val[0] === '0') {
+      counter.style.color = hint.style.color = '#f87171';
+      hint.textContent = '0 ile başlayamaz';
+      return;
+    }
+    // Checksum kontrolü yapılmıyor — 11 rakam yeterli
+    counter.style.color = hint.style.color = '#4ade80';
+    hint.textContent = 'Geçerli';
+  }
+
+  // ── Telefon ipucu ─────────────────────────────────────────────────
+  const phoneLengths = {
+    '+90': { len: 10, hint: '10 haneli girin, başında 0 olmadan (örn: 5321234567)' },
+  };
+  const defaultHint = '7–12 haneli yerel numara girin';
+
+  function updatePhoneHint() {
+    const code   = document.getElementById('phone_code').value;
+    const input  = document.getElementById('phone_local');
+    const hint   = document.getElementById('phone_hint');
+    const digits = input.value.replace(/\D/g, '');
+    const rule   = phoneLengths[code];
+
+    if (rule) {
+      input.maxLength = rule.len;
+      const ok = digits.length === rule.len;
+      hint.textContent = rule.hint;
+      hint.style.color = digits.length === 0 ? '#8c909f' : ok ? '#4ade80' : '#facc15';
+    } else {
+      input.maxLength = 12;
+      const ok = digits.length >= 7 && digits.length <= 12;
+      hint.textContent = defaultHint;
+      hint.style.color = digits.length === 0 ? '#8c909f' : ok ? '#4ade80' : '#facc15';
+    }
+  }
+
+  // Sayfa yüklenince başlangıç durumunu ayarla
+  document.addEventListener('DOMContentLoaded', () => {
+    const tcInput = document.getElementById('tc_no');
+    if (tcInput) validateTc(tcInput);
+    updatePhoneHint();
+  });
+</script>
+{% endblock %}

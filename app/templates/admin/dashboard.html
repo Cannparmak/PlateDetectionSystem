@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-3 gap-6">
+  {% set cards = [
+    ('directions_car', stats.active_sessions,       'dash_active',      'text-primary',  'bg-primary-container/10'),
+    ('analytics',      stats.today_entries,         'lbl_today_entry',  'text-tertiary', 'bg-tertiary-container/10'),
+    ('warning',        stats.expiring_soon,         'lbl_expiring',     'text-error',    'bg-error-container/10'),
+    ('group',          stats.total_customers,       'lbl_customers',    'text-primary',  'bg-primary-container/10'),
+    ('directions_car', stats.total_vehicles,        'lbl_vehicles',     'text-tertiary', 'bg-tertiary-container/10'),
+    ('card_membership',stats.active_subscriptions,  'lbl_active_subs',  'text-tertiary', 'bg-tertiary-container/10'),
+  ] %}
+  {% for icon, val, i18n_key, text_cls, bg_cls in cards %}
+  <div class="bg-surface-container p-6 rounded-3xl ghost-border flex items-center gap-5 hover:bg-surface-container-high transition-colors group">
+    <div class="w-14 h-14 rounded-2xl {{ bg_cls }} flex items-center justify-center group-hover:scale-110 transition-transform">
+      <span class="material-symbols-outlined {{ text_cls }} text-3xl">{{ icon }}</span>
+    </div>
+    <div>
+      <span class="text-4xl font-bold font-mono" style="color:var(--text-primary)">{{ val }}</span>
+      <p class="text-sm font-medium mt-0.5" style="color:var(--text-subtle)" x-text="$store.app.t('{{ i18n_key }}')">—</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Occupancy + Config -->
+<div class="grid grid-cols-12 gap-6">
+  <div class="col-span-4 self-start bg-surface-container-low rounded-3xl p-6 ghost-border flex flex-col items-center text-center">
+    <span class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-4">Doluluk</span>
+    {% set pct = (stats.active_sessions / (config.total_capacity if config else 100) * 100) | round | int %}
+    {% set dash = 264 %}
+    {% set offset = dash - (dash * pct / 100) %}
+    <div class="relative w-40 h-40 flex items-center justify-center">
+      <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="transparent" stroke="#33343b" stroke-width="8"/>
+        <circle cx="50" cy="50" r="42" fill="transparent" stroke="#4d8eff"
+                stroke-width="8" stroke-linecap="round"
+                stroke-dasharray="{{ dash }}" stroke-dashoffset="{{ offset }}"/>
+      </svg>
+      <div class="absolute flex flex-col items-center">
+        <span class="text-4xl font-bold" style="color:var(--text-primary)">{{ pct }}%</span>
+        <span class="text-[10px] uppercase" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_occupancy')">Doluluk</span>
+      </div>
+    </div>
+    <p class="text-xs text-[#8c909f] mt-3">{{ stats.active_sessions }} / {{ config.total_capacity if config else 100 }}</p>
+    {% if config %}
+    <p class="text-xs text-[#8c909f] mt-1">{{ config.name }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent Sessions -->
+  <div class="col-span-8">
+    <div class="flex justify-between items-center mb-4">
+      <h4 class="text-base font-bold" style="color:var(--text-primary)" x-text="$store.app.t('lbl_recent_activity')">Son Aktiviteler</h4>
+      <a href="/sessions" class="text-xs font-bold text-primary hover:underline" x-text="$store.app.t('lbl_view_all_short')">Tümünü Gör</a>
+    </div>
+    <div class="bg-surface-container-low rounded-3xl overflow-hidden ghost-border">
+      <div class="grid grid-cols-4 px-5 py-3 bg-[#0c0e14] text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+        <div x-text="$store.app.t('lbl_plate')">Plaka</div>
+        <div x-text="$store.app.t('lbl_customer')">Müşteri</div>
+        <div x-text="$store.app.t('ses_entry')">Giriş</div>
+        <div class="text-right" x-text="$store.app.t('lbl_status')">Durum</div>
+      </div>
+      <div class="divide-y divide-outline-variant/10">
+        {% for s in recent_sessions %}
+        <div class="grid grid-cols-4 px-5 py-4 items-center hover:bg-surface-container-high transition-colors">
+          <div class="font-mono font-bold plate-font text-sm" style="color:var(--text-primary)">{{ s.vehicle.plate_display if s.vehicle else '—' }}</div>
+          <div class="text-sm" style="color:var(--text-muted)">{{ s.vehicle.customer.full_name if s.vehicle and s.vehicle.customer else '—' }}</div>
+          <div class="text-sm" style="color:var(--text-muted)">{{ s.entry_time.strftime('%H:%M:%S') }}</div>
+          <div class="text-right">
+            <span class="text-[10px] font-bold px-3 py-1 rounded-full
+                         {% if s.is_active %}bg-tertiary-container/10 text-tertiary{% else %}bg-[#33343b] text-[#8c909f]{% endif %}">
+              {% if s.is_active %}İÇERİDE{% else %}ÇIKTI{% endif %}
+            </span>
+          </div>
+        </div>
+        {% else %}
+        <div class="px-5 py-8 text-center text-[#8c909f] text-sm">Henüz kayıt yok.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-4 gap-4">
+  {% set quick_actions = [
+    ('/camera/entry',     'videocam',       'nav_cam_entry'),
+    ('/customers/new',    'person_add',     'cust_new'),
+    ('/subscriptions/new','add_card',       'sub_sell'),
+    ('/admin/reports',    'assessment',     'nav_reports'),
+  ] %}
+  {% for href, icon, i18n_key in quick_actions %}
+  <a href="{{ href }}"
+     class="bg-surface-container p-5 rounded-3xl ghost-border flex items-center gap-4 hover:bg-surface-container-high transition-all group">
+    <span class="material-symbols-outlined text-primary text-2xl group-hover:scale-110 transition-transform">{{ icon }}</span>
+    <span class="text-sm font-semibold" style="color:var(--text-primary)" x-text="$store.app.t('{{ i18n_key }}')"></span>
+  </a>
+  {% endfor %}
+</div>
+
+{% endblock %}

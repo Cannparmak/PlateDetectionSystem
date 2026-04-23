@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Abonelikler{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('sub_title')">Abonelikler</h1>
+    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ subscriptions | length }} <span x-text="$store.app.t('lbl_sub_records')">abonelik kaydı</span></p>
+  </div>
+  <a href="/subscriptions/new"
+     class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+    <span class="material-symbols-outlined text-xl">add_card</span>
+    <span x-text="$store.app.t('sub_new')">Yeni Abonelik</span>
+  </a>
+</div>
+
+<!-- Table -->
+<div class="bg-surface-container-low rounded-3xl overflow-hidden ghost-border">
+  <div class="grid grid-cols-6 px-6 py-3 bg-[#0c0e14] text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+    <div x-text="$store.app.t('lbl_plate')">Plaka</div>
+    <div x-text="$store.app.t('lbl_customer')">Müşteri</div>
+    <div x-text="$store.app.t('lbl_plan')">Plan</div>
+    <div x-text="$store.app.t('lbl_start')">Başlangıç</div>
+    <div x-text="$store.app.t('lbl_end')">Bitiş</div>
+    <div class="text-right" x-text="$store.app.t('lbl_status')">Durum</div>
+  </div>
+  <div class="divide-y divide-outline-variant/10">
+    {% for sub in subscriptions %}
+    <div class="grid grid-cols-6 px-6 py-4 items-center hover:bg-surface-container-high transition-colors">
+      <div class="font-mono font-bold text-white plate-font text-sm">
+        {{ sub.vehicle.plate_display if sub.vehicle else '—' }}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">
+        {{ sub.vehicle.customer.full_name if sub.vehicle and sub.vehicle.customer else '—' }}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">{{ sub.plan.name if sub.plan else '—' }}</div>
+      <div class="text-sm text-[#c2c6d6]">{{ sub.start_date.strftime('%d.%m.%Y') }}</div>
+      <div class="text-sm text-[#c2c6d6]">{{ sub.end_date.strftime('%d.%m.%Y') }}</div>
+      <div class="text-right">
+        {% if sub.is_active %}
+          {% if sub.days_remaining <= 3 %}
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b]">{{ sub.days_remaining }}G KALDI</span>
+          {% else %}
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary">AKTİF</span>
+          {% endif %}
+        {% elif sub.status == 'pending' %}
+        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#f59e0b]/10 text-[#f59e0b]">ÖDEME BEKLİYOR</span>
+        {% elif sub.status == 'cancelled' %}
+        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#33343b] text-[#8c909f]">İPTAL</span>
+        {% else %}
+        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-error-container/10 text-error">SÜRESİ DOLDU</span>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="px-6 py-16 text-center">
+      <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">card_membership</span>
+      <p class="text-[#8c909f]">Henüz abonelik kaydı yok.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

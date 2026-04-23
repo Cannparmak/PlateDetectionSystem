@@ -1,0 +1,165 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Dokuman 00: Master Roadmap ve Karar Defteri
+Surum: v1.0
+
+===================================================================
+A) BU DOKUMANIN AMACI
+===================================================================
+Bu dokuman, tum proje belgelerinin tek sayfada ozetidir.
+Buraya bakildiginda su 3 soru net cevaplanmalidir:
+1) Ne yapiyoruz?
+2) Hangi kararlar kesinlesti?
+3) Siradaki adim ve eksik kalanlar neler?
+
+===================================================================
+B) PROJE OZETI
+===================================================================
+Hedef:
+Abonelik tabanli akilli otopark sistemi gelistirmek.
+
+Ana Bilesenler:
+1) ALPR (Plate Detection + OCR + Post-processing)
+2) Web Uygulamasi (kullanici/arac/abonelik/fake odeme)
+3) Gecis Karar Motoru (1/0)
+4) Loglama ve Admin Yonetimi
+
+Temel Is Kurali:
+Abonelik kisiye degil, araca baglidir.
+
+===================================================================
+C) KESINLESMIS TEKNIK KARARLAR
+===================================================================
+Asagidaki kararlar bu surumde kesinlestirilmistir:
+
+| Baslik | Karar |
+|---|---|
+| Programlama Dili | Python |
+| Detection Modeli | Ultralytics YOLO |
+| OCR Baslangici | EasyOCR baseline + post-processing |
+| Veritabani | MySQL (ana secim), MSSQL alternatif, MongoDB sadece log/yardimci kullanim |
+| Backend | FastAPI |
+| Frontend | React (admin + user panel) |
+| Ilk Ana Dataset | CCPD |
+| Cok ulke stratejisi | Kuralli format puanlama + veri genisletme |
+
+Not:
+- "Kesin" etiketli kararlar yalnizca major bir sebeple revize edilir.
+
+===================================================================
+D) DOKUMAN HARITASI
+===================================================================
+| Dokuman | Konu | Durum |
+|---|---|---|
+| 00_MASTER_ROADMAP.doc | Toplam yol haritasi + kararlar | TAMAM |
+| 01_KURULUM_VE_DATASET.doc | Ortam ve dataset indirme | TAMAM |
+| 02_DATASET_HAZIRLIK_VE_YOLO_EGITIM.doc | Veri hazirlama + YOLO egitim | TAMAM |
+| 03_OCR_VE_POSTPROCESSING.doc | OCR ve metin stabilizasyonu | TAMAM |
+| 04_WEB_ABONELIK_ADMIN_VE_DB.doc | Web + DB + karar motoru | TAMAM |
+| 05_DONANIM_SIMULASYON.doc | LED/Arduino simulasyonu | BEKLEMEDE |
+
+===================================================================
+E) FAZ BAZLI ROADMAP
+===================================================================
+FAZ-1: Kurulum ve Veri
+- ortam kurulumu
+- dataset indirme/acma
+- klasor standardi
+Durum: TAMAM
+
+FAZ-2: Detection (YOLO)
+- CCPD -> YOLO format
+- train/val/test
+- ilk model egitimi ve inference
+- test split: scripts/05_inference_test.py
+- kamera / foto / video: scripts/06_camera_predict.py
+Durum: PLANLANDI (uygulama bekliyor)
+
+FAZ-3: OCR ve Stabilizasyon
+- EasyOCR baseline
+- preprocess varyantlari
+- karakter duzeltme + temporal voting
+- ulke bazli format puanlama
+Durum: PLANLANDI (uygulama bekliyor)
+
+FAZ-4: Web + Abonelik + Admin
+- kullanici/araç/abonelik/fake odeme
+- access check API
+- admin ekranlari
+Durum: PLANLANDI (uygulama bekliyor)
+
+FAZ-5: Donanim Simulasyon
+- 1/0 sonucunu LED sinyaline baglama
+Durum: ERTELENDI (kullanici istegiyle)
+
+===================================================================
+F) OCR BASARI KRITERLERI (NET KPI)
+===================================================================
+Bu proje icin OCR tarafinda "yuksek dogruluk" olculebilir hedefe baglandi:
+
+| KPI | Hedef |
+|---|---|
+| Plate exact match accuracy (TR test set) | >= %97 |
+| Plate exact match accuracy (EU karmasi test set) | >= %94 |
+| Character-level accuracy (TR+EU) | >= %98.5 |
+| Unknown/retry orani | <= %8 |
+| Yetkisiz araca yanlis 1 verme (false accept) | <= %0.3 |
+
+Oncelik sirasi:
+1) False accept oranini dusuk tut
+2) Sonra exact-match oranini artir
+
+===================================================================
+G) AVRUPA + TURKIYE UYUMLULUK STRATEJISI
+===================================================================
+Yalnizca TR regex yaklasimi YOK.
+Asagidaki model uygulanacak:
+1) normalize
+2) ulke-aday puanlama (TR/DE/FR/IT/NL...)
+3) format skoru
+4) temporal skor
+5) final karar
+
+Ilk desteklenecek ulkeler:
+- TR, DE, FR, IT, NL
+
+Sonraki genisleme:
+- ES, PL, BE, AT, CH
+
+===================================================================
+H) SISTEM AKIS DIYAGRAMI (METIN)
+===================================================================
+[Kamera/Ekran]
+   ->
+[YOLO Plate Detection]
+   ->
+[Plate Crop + OCR + Postprocess]
+   ->
+[Plate Clean + Country Candidate + Score]
+   ->
+[DB Access Check]
+   -> yes -> [Decision=1 -> GREEN]
+   -> no  -> [Decision=0 -> RED]
+   ->
+[Access Event Log]
+
+===================================================================
+I) RISKLER VE AZALTMA PLANI
+===================================================================
+| Risk | Etki | Azaltma |
+|---|---|---|
+| OCR kararsizligi | Yanlis karar | Temporal voting + confidence esigi |
+| Ulke format farklari | False reject | Ulke bazli kural seti + UNKNOWN sinifi |
+| Veri yanliligi (tek ulke agirlikli) | Diger ulkede dusuk basari | EU veri ekleme + karmasik test seti |
+| DB performansi | Gecis gecikmesi | Index: plate_text,country_code + cache |
+
+===================================================================
+J) BU NOKTADA NE KACIRIRSAK PROJE RISKLI OLUR?
+===================================================================
+Kritik kacirilmaması gerekenler:
+1) Plate normalizasyonunun her noktada ayni yapilmasi
+2) False accept oranina KPI konulmasi
+3) Test setinin TR + Avrupa karmasi olmasi
+4) Access olaylarinin eksiksiz loglanmasi
+5) Aboneligin arac bazli kalmasi (kullanici bazliya kaymama)
+
+Dokuman-00 Sonu

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Environment variables (secrets)
+.env
+
+# Large data directories
+data/
+outputs/
+
+# YOLO training runs
+runs/
+
+# Database files (recreated at runtime)
+otopark.db
+otopark.db-shm
+otopark.db-wal
+
+# Base YOLO pretrained weight (download separately)
+yolo11n.pt
+
+# IDE and OS
+.claude/
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+kernel.errors.txt
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp

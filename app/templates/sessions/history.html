@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Oturum Geçmişi{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('ses_title')">Oturum Geçmişi</h1>
+    <p class="text-[#8c909f] text-sm mt-1">
+      {{ active_count }} araç içeride · Toplam {{ total }} kayıt
+    </p>
+  </div>
+  <div class="flex items-center gap-2 px-4 py-2 bg-tertiary-container/10 rounded-2xl">
+    <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+    <span class="text-sm font-semibold text-tertiary">{{ active_count }} İçeride</span>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="bg-surface-container-low rounded-3xl overflow-hidden ghost-border">
+  <div class="grid grid-cols-6 px-6 py-3 bg-[#0c0e14] text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+    <div x-text="$store.app.t('lbl_plate')">Plaka</div>
+    <div x-text="$store.app.t('lbl_customer')">Müşteri</div>
+    <div x-text="$store.app.t('lbl_entry_time')">Giriş</div>
+    <div x-text="$store.app.t('lbl_exit_time')">Çıkış</div>
+    <div x-text="$store.app.t('lbl_duration')">Süre</div>
+    <div class="text-right" x-text="$store.app.t('lbl_status')">Durum</div>
+  </div>
+  <div class="divide-y divide-outline-variant/10">
+    {% for s in sessions %}
+    <div class="grid grid-cols-6 px-6 py-4 items-center hover:bg-surface-container-high transition-colors">
+      <div class="font-mono font-bold text-white plate-font text-sm">
+        {{ s.vehicle.plate_display if s.vehicle else '—' }}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">
+        {{ s.vehicle.customer.full_name if s.vehicle and s.vehicle.customer else '—' }}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">
+        {{ s.entry_time.strftime('%d.%m %H:%M') }}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">
+        {% if s.exit_time %}{{ s.exit_time.strftime('%d.%m %H:%M') }}{% else %}—{% endif %}
+      </div>
+      <div class="text-sm text-[#c2c6d6]">
+        {% if s.duration_minutes %}
+          {% if s.duration_minutes >= 60 %}
+            {{ (s.duration_minutes / 60) | int }}s {{ s.duration_minutes % 60 }}dk
+          {% else %}
+            {{ s.duration_minutes }} dk
+          {% endif %}
+        {% elif s.is_active %}
+          <span class="text-tertiary text-xs font-semibold">Devam ediyor</span>
+        {% else %}—{% endif %}
+      </div>
+      <div class="text-right">
+        {% if s.is_active %}
+        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary">İÇERİDE</span>
+        {% else %}
+        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#33343b] text-[#8c909f]">ÇIKTI</span>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="px-6 py-16 text-center">
+      <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">history</span>
+      <p class="text-[#8c909f]">Henüz kayıt yok.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2">
+  {% if page > 1 %}
+  <a href="/sessions?page={{ page - 1 }}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    ← Önceki
+  </a>
+  {% endif %}
+  <span class="text-sm text-[#8c909f] px-4">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="/sessions?page={{ page + 1 }}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    Sonraki →
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

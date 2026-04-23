@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Abonelik Sat{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="/subscriptions" class="text-[#8c909f] hover:text-white transition-colors">
+    <span class="material-symbols-outlined text-xl">arrow_back</span>
+  </a>
+  <h1 class="text-2xl font-bold text-white">Abonelik Sat</h1>
+</div>
+<p class="text-[#8c909f] text-sm ml-9">Plan ve araç seçerek abonelik oluştur</p>
+
+<div class="max-w-3xl" x-data="{ selectedPlan: {{ vehicle.subscriptions[0].plan_id if vehicle and vehicle.subscriptions else 'null' }}, selectedVehicle: {{ vehicle.id if vehicle else 'null' }} }">
+
+  {% if error %}
+  <div class="p-4 bg-error-container/20 rounded-2xl text-error text-sm flex items-center gap-2 mb-6">
+    <span class="material-symbols-outlined text-base">error</span>{{ error }}
+  </div>
+  {% endif %}
+
+  <form method="post" action="/subscriptions/new" class="space-y-6">
+
+    <!-- Vehicle info (if pre-selected) -->
+    {% if vehicle %}
+    <div class="bg-[#1e1f26] rounded-3xl p-5 ghost-border flex items-center gap-4">
+      <div class="w-11 h-11 rounded-xl bg-primary-container/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary">directions_car</span>
+      </div>
+      <div>
+        <p class="font-mono font-bold text-white plate-font">{{ vehicle.plate_display }}</p>
+        <p class="text-sm text-[#8c909f]">{{ vehicle.customer.full_name if vehicle.customer else '—' }}</p>
+      </div>
+      <input type="hidden" name="vehicle_id" value="{{ vehicle.id }}"/>
+    </div>
+    {% else %}
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-3">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Araç Plakası *</h3>
+      <input type="text" name="vehicle_plate_search" id="vehiclePlateSearch"
+             placeholder="Plaka girin..."
+             class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono tracking-widest uppercase"/>
+      <input type="hidden" name="vehicle_id" id="vehicleIdInput" required/>
+      <p class="text-xs text-[#8c909f]">Arama yapın ve araç seçin ya da direkt ID girin.</p>
+    </div>
+    {% endif %}
+
+    <!-- Plan seçimi -->
+    <div class="space-y-3">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest px-1">Plan Seçin *</h3>
+      <div class="grid grid-cols-2 gap-4">
+        {% for plan in plans %}
+        <label class="cursor-pointer">
+          <input type="radio" name="plan_id" value="{{ plan.id }}"
+                 class="sr-only" required
+                 x-model="selectedPlan"
+                 @change="selectedPlan = {{ plan.id }}"/>
+          <div :class="selectedPlan == {{ plan.id }} ? 'ring-2 ring-primary bg-primary/5' : 'bg-surface-container ghost-border hover:bg-surface-container-high'"
+               class="rounded-3xl p-5 transition-all">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl bg-primary-container/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1;">card_membership</span>
+              </div>
+              <div :class="selectedPlan == {{ plan.id }} ? 'opacity-100' : 'opacity-0'"
+                   class="w-5 h-5 rounded-full bg-primary flex items-center justify-center transition-opacity">
+                <span class="material-symbols-outlined text-on-primary text-sm">check</span>
+              </div>
+            </div>
+            <p class="font-bold text-white">{{ plan.name }}</p>
+            <p class="text-xs text-[#8c909f] mt-0.5">{{ (plan.duration_hours / 24) | int }} gün</p>
+            <p class="text-2xl font-bold text-white mt-3">{{ plan.price | int }} <span class="text-sm text-[#8c909f] font-normal">₺</span></p>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <a href="/subscriptions"
+         class="flex-1 h-12 flex items-center justify-center rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+        İptal
+      </a>
+      <button type="submit"
+              class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+        Ödemeye Geç
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

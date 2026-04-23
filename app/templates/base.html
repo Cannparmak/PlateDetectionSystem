@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}CanPark{% endblock %} | CanPark</title>
+
+  <!-- Tema: localStorage'dan oku ve render başlamadan önce uygula (flash önleme) -->
+  <script>
+    (function() {
+      var t = localStorage.getItem("theme") || "dark";
+      var h = document.documentElement;
+      if (t === "light") {
+        h.classList.remove("dark");
+        h.classList.add("light");
+      } else {
+        h.classList.add("dark");
+        h.classList.remove("light");
+      }
+    })();
+  </script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Alpine.js — BEFORE app.js so alpine:init fires -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Tailwind Config — CSS Variable Driven (temalar otomatik değişir) -->
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            /* ── Tema-duyarlı yüzeyler: CSS variable → otomatik dark/light ── */
+            "surface-container":          "var(--bg-card)",
+            "surface-container-low":      "var(--bg-sidebar)",
+            "surface-container-lowest":   "var(--bg-deep)",
+            "surface-container-high":     "var(--bg-raised)",
+            "surface-container-highest":  "var(--bg-chip)",
+            "surface-dim":                "var(--bg-base)",
+            "surface-variant":            "var(--bg-chip)",
+            "surface-bright":             "var(--bg-raised)",
+            "background":                 "var(--bg-base)",
+            "surface":                    "var(--bg-base)",
+            "surface-tint":               "var(--accent)",
+            /* ── Metin renkleri ── */
+            "on-surface":                 "var(--text-primary)",
+            "on-surface-variant":         "var(--text-muted)",
+            "on-background":              "var(--text-primary)",
+            "outline":                    "var(--text-subtle)",
+            "outline-variant":            "var(--text-subtle)",
+            /* ── Birincil aksant (dark: #adc6ff · light: #1a7f37) ── */
+            "primary":                    "var(--accent)",
+            "on-primary":                 "var(--accent-on)",
+            "primary-fixed":              "var(--accent)",
+            "primary-fixed-dim":          "var(--accent)",
+            "surface-tint":               "var(--accent)",
+            "inverse-primary":            "var(--accent)",
+            /* ── Sabit aksant renkler (her iki temada aynı) ── */
+            "tertiary":                   "#4edea3",
+            "tertiary-container":         "#00a572",
+            "on-tertiary":                "#003824",
+            "on-tertiary-container":      "#00311f",
+            "tertiary-fixed":             "#6ffbbe",
+            "tertiary-fixed-dim":         "#4edea3",
+            "error":                      "#ffb4ab",
+            "error-container":            "#93000a",
+            "on-error":                   "#690005",
+            "on-error-container":         "#ffdad6",
+            "primary-container":          "#4d8eff",
+            "on-primary-container":       "#00285d",
+            "on-primary-fixed":           "#001a42",
+            "secondary":                  "#c2c7d0",
+            "secondary-container":        "#42474f",
+            "secondary-fixed":            "#dee2ec",
+            "secondary-fixed-dim":        "#c2c7d0",
+            "on-secondary":               "#2c3138",
+            "on-secondary-fixed":         "#171c23",
+            "on-secondary-container":     "#b1b5bf",
+            "inverse-on-surface":         "#2e3037",
+            "inverse-surface":            "#e2e2eb",
+          },
+          fontFamily: {
+            sans:  ["Inter", "sans-serif"],
+            mono:  ["'Courier New'", "monospace"],
+          },
+          borderRadius: {
+            DEFAULT: "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            full: "9999px",
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+    /* ══════════════════════════════════════════════════
+       DARK MODE — CSS Variables (default)
+    ══════════════════════════════════════════════════ */
+    html, html.dark {
+      --bg-base:        #111319;
+      --bg-sidebar:     #191b22;
+      --bg-card:        #1e1f26;
+      --bg-deep:        #0c0e14;
+      --bg-raised:      #282a30;
+      --bg-chip:        #33343b;
+      --text-primary:   #e2e2eb;
+      --text-muted:     #c2c6d6;
+      --text-subtle:    #8c909f;
+      --accent:         #adc6ff;
+      --accent-glow:    rgba(77,142,255,0.25);
+      --accent-on:      #002e6a;
+      --green:          #4edea3;
+      --green-bg:       rgba(0,165,114,0.12);
+      --card-shadow:    none;
+      --divider:        rgba(66,71,84,0.15);
+    }
+
+    /* ══════════════════════════════════════════════════
+       LIGHT MODE — CSS Variables
+       Palette: nötr gri + zümrüt yeşil aksant
+    ══════════════════════════════════════════════════ */
+    html.light {
+      --bg-base:        #f6f8fa;
+      --bg-sidebar:     #ffffff;
+      --bg-card:        #ffffff;
+      --bg-deep:        #eef1f5;
+      --bg-raised:      #f3f6f9;
+      --bg-chip:        #dde3ea;
+      --text-primary:   #1c2128;
+      --text-muted:     #424a57;
+      --text-subtle:    #656d76;
+      --accent:         #1a7f37;
+      --accent-glow:    rgba(26,127,55,0.18);
+      --accent-on:      #ffffff;
+      --green:          #116329;
+      --green-bg:       rgba(26,127,55,0.08);
+      --card-shadow:    0 1px 3px rgba(28,33,40,0.08), 0 1px 2px rgba(28,33,40,0.04);
+      --divider:        rgba(28,33,40,0.08);
+    }
+
+    /* ══════════════════════════════════════════════════
+       BASE STRUCTURE
+    ══════════════════════════════════════════════════ */
+    body   { background-color: var(--bg-base); color: var(--text-primary); font-family: 'Inter', sans-serif; }
+    header { background-color: var(--bg-sidebar) !important;
+             border-bottom: 1px solid var(--divider); }
+    aside  { background-color: var(--bg-sidebar) !important;
+             border-right: 1px solid var(--divider); }
+
+    /* ══════════════════════════════════════════════════
+       Tailwind config artık CSS variable kullandığı için
+       bg-surface-container vb. otomatik tema değiştirir.
+       Burada sadece şablonlardaki HARDCODED HEX'ler için override.
+    ══════════════════════════════════════════════════ */
+
+    /* Hardcoded hex yüzeyler — light modda CSS variable'a yönlendir */
+    html.light .bg-\[#111319\] { background-color: var(--bg-base)   !important; }
+    html.light .bg-\[#191b22\] { background-color: var(--bg-sidebar) !important; }
+    html.light .bg-\[#1e1f26\] { background-color: var(--bg-card)   !important; box-shadow: var(--card-shadow); }
+    html.light .bg-\[#0c0e14\] { background-color: var(--bg-deep)   !important; }
+    html.light .bg-\[#282a30\] { background-color: var(--bg-raised) !important; }
+    html.light .bg-\[#33343b\] { background-color: var(--bg-chip)   !important; }
+
+    /* Hardcoded hex metinler — light modda CSS variable'a yönlendir */
+    html.light .text-white,
+    html.light .text-\[#e2e2eb\] { color: var(--text-primary) !important; }
+    html.light .text-\[#c2c6d6\] { color: var(--text-muted)   !important; }
+    html.light .text-\[#8c909f\] { color: var(--text-subtle)  !important; }
+    html.light .hover\:text-white:hover { color: var(--text-primary) !important; }
+
+    /* ══════════════════════════════════════════════════
+       ACCENT — primary config'de var() kullandığı için
+       bg-primary ve text-on-primary otomatik değişir.
+       Sadece hardcoded bg-[#adc6ff] gibi durumlar için:
+    ══════════════════════════════════════════════════ */
+    .text-primary { color: var(--accent) !important; }
+    html.light .text-on-primary { color: #ffffff !important; }
+
+    /* ══════════════════════════════════════════════════
+       GHOST BORDER
+    ══════════════════════════════════════════════════ */
+    html.dark  .ghost-border { border: 1px solid rgba(66,71,84,0.18); }
+    html.light .ghost-border { border: 1px solid rgba(28,33,40,0.10); box-shadow: var(--card-shadow); }
+
+    /* ══════════════════════════════════════════════════
+       ACTIVE NAV ITEM — light
+    ══════════════════════════════════════════════════ */
+    html.light nav a.text-primary {
+      background-color: rgba(26,127,55,0.10) !important;
+      box-shadow: none !important;
+    }
+
+    /* ══════════════════════════════════════════════════
+       GLOWS
+    ══════════════════════════════════════════════════ */
+    html.dark .signature-glow { box-shadow: 0 0 20px rgba(77,142,255,0.10); }
+    html.dark .glow-active    { box-shadow: 0 0 20px rgba(77,142,255,0.30); }
+    html.light .glow-active   { box-shadow: 0 0 18px var(--accent-glow); }
+    html.light .signature-glow { box-shadow: var(--card-shadow); }
+    .success-glow             { box-shadow: 0 0 15px rgba(0,165,114,0.35); }
+    .error-glow               { box-shadow: 0 0 15px rgba(147,0,10,0.35); }
+
+    /* ══════════════════════════════════════════════════
+       INPUTS
+    ══════════════════════════════════════════════════ */
+    html.light input, html.light select, html.light textarea {
+      color: var(--text-primary) !important;
+      background-color: var(--bg-card) !important;
+      border-color: rgba(28,33,40,0.15) !important;
+    }
+    html.light input::placeholder { color: var(--text-subtle) !important; }
+
+    /* ══════════════════════════════════════════════════
+       DIVIDERS
+    ══════════════════════════════════════════════════ */
+    html.light [class*="divide-"] > * + * { border-color: rgba(28,33,40,0.08) !important; }
+
+    /* ══════════════════════════════════════════════════
+       SCROLLBAR
+    ══════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-chip); border-radius: 3px; }
+
+    /* ══════════════════════════════════════════════════
+       MISC
+    ══════════════════════════════════════════════════ */
+    .plate-font { font-family: 'Courier New', monospace; letter-spacing: 0.12em; }
+
+    /* ── Smooth transition ── */
+    *, *::before, *::after { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease; }
+    .material-symbols-outlined, .plate-font, [x-cloak] { transition: none !important; }
+  </style>
+
+  <!-- App JS (Alpine store — theme + i18n) -->
+  <script src="/static/js/app.js?v=3"></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="overflow-hidden" x-data x-init="$store.app.init()">
+
+<!-- ── Top Navigation ───────────────────────────────────────────── -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center h-16 px-6 tracking-tight">
+  <div class="flex items-center">
+    <a href="/dashboard" class="text-xl font-bold text-primary tracking-tighter">CanPark</a>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <!-- Theme toggle -->
+    <button @click="$store.app.toggleTheme()"
+            :title="$store.app.isDark ? 'Açık tema' : 'Koyu tema'"
+            class="w-9 h-9 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined text-[#c2c6d6] text-lg" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+    </button>
+
+    <!-- Language toggle -->
+    <button @click="$store.app.toggleLang()"
+            title="Change language"
+            class="h-9 px-3 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:bg-surface-container-high transition-colors">
+      <span class="text-xs font-bold text-[#c2c6d6] tracking-wider" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+    </button>
+
+    <div class="flex flex-col items-end">
+      <span class="text-primary font-semibold text-xs tracking-widest uppercase">
+        {{ user.role | upper if user else '' }}
+      </span>
+      <span class="text-[#8c909f] text-xs">{{ user.full_name if user else '' }}</span>
+    </div>
+
+    <div class="relative" x-data="{ open: false }">
+      <button @click="open = !open"
+              class="w-10 h-10 rounded-full bg-[#33343b] flex items-center justify-center ghost-border hover:bg-surface-container-high transition-colors">
+        <span class="material-symbols-outlined text-primary">account_circle</span>
+      </button>
+      <div x-show="open" @click.outside="open = false" x-transition
+           class="absolute right-0 mt-2 w-48 bg-surface-container-highest rounded-2xl ghost-border py-2 z-50">
+        <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-base">logout</span>
+          <span x-text="$store.app.t('nav_logout')">Çıkış Yap</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Layout ────────────────────────────────────────────────────── -->
+<div class="flex h-screen pt-16">
+
+  <!-- ── Sidebar ───────────────────────────────────────────────── -->
+  <aside class="fixed left-0 top-0 h-full w-64 z-40 bg-[#191b22] flex flex-col pt-20 pb-6 px-4 gap-2">
+    <div class="mb-4 px-4">
+      <h2 class="text-xs font-bold text-primary uppercase tracking-widest opacity-50"
+          x-text="$store.app.t('nav_management')">Management</h2>
+    </div>
+    <nav class="space-y-1">
+      {% set nav_items = [
+        ('/admin',          'dashboard',      'nav_dashboard',     'Dashboard',        'admin'),
+        ('/camera/entry',   'login',          'nav_cam_entry',     'Giriş Kamerası',   'both'),
+        ('/camera/exit',    'logout',         'nav_cam_exit',      'Çıkış Kamerası',   'both'),
+        ('/customers',      'group',          'nav_customers',     'Müşteriler',       'both'),
+        ('/vehicles',       'directions_car', 'nav_vehicles',      'Araçlar',          'both'),
+        ('/subscriptions',  'card_membership','nav_subscriptions', 'Abonelikler',      'both'),
+        ('/sessions',       'history',        'nav_sessions',      'Oturumlar',        'both'),
+        ('/admin/reports',  'assessment',     'nav_reports',       'Raporlar',         'admin'),
+        ('/admin/users',    'manage_accounts','nav_users',         'Kullanıcılar',     'admin'),
+      ] %}
+      {% for href, icon, i18n_key, label, roles in nav_items %}
+        {% if roles == 'both' or (user and user.role == roles) %}
+        <a href="{{ href }}"
+           class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all
+                  {% if request.url.path.startswith(href) and href != '/' %}
+                    bg-[#1e1f26] text-primary signature-glow
+                  {% else %}
+                    text-[#c2c6d6] hover:bg-[#1e1f26] hover:text-white
+                  {% endif %}">
+          <span class="material-symbols-outlined"
+                style="{% if request.url.path.startswith(href) and href != '/' %}font-variation-settings: 'FILL' 1;{% endif %}">
+            {{ icon }}
+          </span>
+          <span x-text="$store.app.t('{{ i18n_key }}')">{{ label }}</span>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+
+    <!-- System Health -->
+    <div class="mt-auto px-4 py-4 bg-[#0c0e14] rounded-2xl ghost-border">
+      <p class="text-[10px] text-[#8c909f] uppercase font-bold mb-2"
+         x-text="$store.app.t('sys_health')">System Health</p>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-tertiary-container success-glow animate-pulse"></div>
+        <span class="text-xs text-[#e2e2eb]" x-text="$store.app.t('sys_ok')">All systems operational</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────────── -->
+  <main class="flex-1 ml-64 overflow-y-auto">
+    <div class="max-w-[1440px] mx-auto p-8 space-y-8">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+
+<!-- Flash messages -->
+{% if flash %}
+<div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
+     class="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl ghost-border text-sm font-medium
+            {% if flash.type == 'error' %}bg-error-container text-on-error-container{% else %}bg-tertiary-container/20 text-tertiary{% endif %}">
+  {{ flash.message }}
+</div>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

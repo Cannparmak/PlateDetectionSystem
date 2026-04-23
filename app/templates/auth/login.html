@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Giriş | CanPark</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = { darkMode:"class", theme:{ extend:{ colors:{
+      "primary":"#adc6ff","primary-container":"#4d8eff","surface":"#111319",
+      "surface-container":"#1e1f26","surface-container-low":"#191b22",
+      "surface-container-highest":"#33343b","on-surface":"#e2e2eb",
+      "on-surface-variant":"#c2c6d6","outline-variant":"#424754",
+      "tertiary":"#4edea3","tertiary-container":"#00a572","error":"#ffb4ab",
+    }}}}
+  </script>
+  <style>
+    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+    body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}
+    html:not(.dark) body{background-color:#f4f6fb;color:#1a1c23;}
+    html:not(.dark) .bg-\[#1e1f26\]{background-color:#e8eaf4!important;}
+    html:not(.dark) .bg-\[#191b22\]{background-color:#eef0f8!important;}
+    html:not(.dark) .text-\[#8c909f\]{color:#6b6f82!important;}
+    html:not(.dark) .text-\[#e2e2eb\]{color:#1a1c23!important;}
+    .ghost-border{border:1px solid rgba(66,71,84,0.15);}
+    .glow-active{box-shadow:0 0 20px rgba(77,142,255,0.30);}
+    input:focus{outline:none;border-color:rgba(77,142,255,0.5)!important;box-shadow:0 0 0 4px rgba(77,142,255,0.1);}
+    *,*::before,*::after{transition:background-color 0.2s ease,color 0.15s ease;}
+    .material-symbols-outlined{transition:none!important;}
+  </style>
+  <script src="/static/js/app.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4" x-data x-init="$store.app.init()">
+
+  <!-- Top-right controls -->
+  <div class="fixed top-4 right-4 flex items-center gap-2">
+    <button @click="$store.app.toggleTheme()"
+            class="w-9 h-9 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+      <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+    </button>
+    <button @click="$store.app.toggleLang()"
+            class="h-9 px-3 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+      <span class="text-xs font-bold text-[#c2c6d6]" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+    </button>
+  </div>
+
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-primary tracking-tighter">CanPark</h1>
+      <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.isEN ? 'Staff Login' : 'Personel Girişi'">Personel Girişi</p>
+    </div>
+
+    <div class="bg-[#1e1f26] rounded-3xl p-8 ghost-border">
+      {% if error %}
+      <div class="mb-6 p-4 bg-[#93000a]/20 border border-[#93000a]/30 rounded-2xl flex items-center gap-3 text-[#ffb4ab] text-sm">
+        <span class="material-symbols-outlined text-base">error</span>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post" action="/login" class="space-y-5">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2"
+                 x-text="$store.app.t('login_email')">E-posta</label>
+          <div class="flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-3">
+            <span class="material-symbols-outlined text-[#8c909f] text-base">email</span>
+            <input type="email" name="email" required autocomplete="email"
+                   class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#e2e2eb] placeholder:text-[#8c909f]"
+                   placeholder="admin@otopark.local"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2"
+                 x-text="$store.app.t('login_password')">Şifre</label>
+          <div class="flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-3">
+            <span class="material-symbols-outlined text-[#8c909f] text-base">lock</span>
+            <input type="password" name="password" required autocomplete="current-password"
+                   class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#e2e2eb] placeholder:text-[#8c909f]"
+                   placeholder="••••••••"/>
+          </div>
+        </div>
+        <button type="submit"
+                class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl flex items-center justify-center gap-2
+                       hover:brightness-110 active:scale-95 transition-all glow-active mt-2">
+          <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">login</span>
+          <span x-text="$store.app.t('login_btn')">Giriş Yap</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-[#8c909f] text-sm mt-6">
+      <span x-text="$store.app.isEN ? 'For customer portal ' : 'Müşteri portalı için '">Müşteri portalı için </span>
+      <a href="/musteri/login" class="text-[#adc6ff] hover:underline"
+         x-text="$store.app.isEN ? 'click here' : 'buraya tıklayın'">buraya tıklayın</a>
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,358 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Dokuman 03: OCR Kurulumu, Metin Temizleme ve Cok Ulke Plaka Dogrulama
+Surum: v1.0
+
+-------------------------------------------------------------------
+1) DOKUMAN AMACI
+-------------------------------------------------------------------
+Bu dokumanin amaci:
+- tespit edilen plaka bolgesinden metin okumayi baslatmak,
+- EasyOCR ile baseline bir OCR akisi kurmak,
+- eski projede yasanan OCR kararsizliklarini azaltmak,
+- tekrar ayiklama, karakter duzeltme ve dogrulama adimlarini eklemek,
+- sadece Turk plakalari degil, birden fazla ulke plakasi icin esnek bir
+  dogrulama mimarisi tasarlamaktir.
+
+-------------------------------------------------------------------
+2) GIRDI VE CIKTI TANIMI
+-------------------------------------------------------------------
+Girdi:
+- YOLO tespit sonucu (bbox koordinatlari)
+- Kaynak frame/goruntu
+
+Cikti:
+- plate_text_raw (OCR ham metin)
+- plate_text_clean (temizlenmis metin)
+- country_candidate (olasi ulke kodu/etiketi)
+- is_valid_format (format kontrol sonucu: True/False)
+- confidence_score (birlesik guven skoru)
+
+-------------------------------------------------------------------
+3) NEDEN SADECE "DIREKT OCR" YETMEZ
+-------------------------------------------------------------------
+Pratikte OCR ham ciktilarinda su sorunlar gorulur:
+- karakter karisikligi (O/0, I/1, B/8, S/5)
+- ayni plakanin farkli framelerde farkli okunmasi
+- eksik/uzun metin cikmasi
+- dusuk kalite, blur, aci, parlama etkileri
+
+Bu nedenle:
+- OCR'i tek adim degil bir pipeline olarak ele almak gerekir.
+
+-------------------------------------------------------------------
+4) OCR PIPELINE MIMARISI
+-------------------------------------------------------------------
+Asama-1: Plate crop
+- YOLO bbox ile plaka alani kirpilir.
+- bbox'e %5-%10 margin eklenebilir.
+
+Asama-2: On-isleme (preprocessing)
+- grayscale
+- contrast artirma (CLAHE opsiyonel)
+- noise azaltma
+- threshold/adaptive threshold
+- gerekiyorsa perspective duzeltme
+
+Asama-3: OCR okuma
+- EasyOCR reader ile metin adaylari alinir.
+- bbox + text + confidence tutulur.
+
+Asama-4: Metin normalizasyonu
+- buyuk harf donusumu
+- bosluk/sembol temizleme
+- Unicode/locale normalize
+
+Asama-5: Post-processing
+- karakter duzeltme kurallari
+- tekrar ayiklama (temporal voting)
+- ulke bazli format dogrulama
+
+Asama-6: Son karar
+- confidence + format + gecmis frameler birlikte degerlendirilir.
+
+-------------------------------------------------------------------
+5) SCRIPT PLANI
+-------------------------------------------------------------------
+Bu dokuman kapsaminda su scriptler tasarlanir:
+
+src/ocr/
+  ocr_reader.py
+  ocr_preprocess.py
+  ocr_postprocess.py
+  ocr_country_rules.py
+
+scripts/
+  06_ocr_baseline_test.py
+  07_ocr_stability_test.py
+
+-------------------------------------------------------------------
+6) EASYOCR BASELINE KURULUMU
+-------------------------------------------------------------------
+Kurulum (Dokuman-01'de var):
+python -m pip install easyocr
+
+Baseline kod mantigi:
+1) easyocr.Reader olustur
+2) crop gorselini ver
+3) readtext sonucunu al
+4) en yuksek confidence sonucu sec
+
+Dil secimi notu:
+- cok ulke hedefi icin baslangicta latin agirlikli kurulumla basla
+- ihtiyaca gore dil listesi genislet
+
+Performans notu:
+- ilk adimda dogruluk odakli git
+- hiz optimizasyonu sonra yapilacak
+
+-------------------------------------------------------------------
+7) PREPROCESSING STRATEJISI
+-------------------------------------------------------------------
+Tek bir preprocess tum goruntulerde en iyi sonucu vermez.
+Bu nedenle 2-3 varyantli deneme onerilir:
+
+Varyant-A:
+- grayscale + hafif blur + otsu threshold
+
+Varyant-B:
+- grayscale + CLAHE + adaptive threshold
+
+Varyant-C:
+- sharpen + bilateral filter + threshold
+
+Yaklasim:
+- ayni crop icin birden cok varyant uret
+- OCR'i hepsinde calistir
+- en iyi confidence + format uyumuna sahip sonucu sec
+
+-------------------------------------------------------------------
+8) METIN NORMALIZASYONU KURALLARI
+-------------------------------------------------------------------
+Temel temizlik:
+- tum metni uppercase yap
+- A-Z ve 0-9 disi karakterleri sil
+- ard arda bosluklari kaldir
+
+Ornek:
+" 34 ab 1234 " -> "34AB1234"
+"TR-34*AB 1234" -> "TR34AB1234"
+
+Not:
+Ulke kodu (TR, D, F vb.) ileride ayrica ele alinacak.
+
+-------------------------------------------------------------------
+9) KARAKTER KARISIKLIKLARI ICIN DUZELTME
+-------------------------------------------------------------------
+Yaygin karisikliklar:
+- O <-> 0
+- I <-> 1
+- B <-> 8
+- S <-> 5
+- Z <-> 2
+- G <-> 6
+
+Kural tabanli yaklasim:
+- metnin harf beklenen bolgesinde rakam varsa harfe cevir
+- rakam beklenen bolgede harf varsa rakama cevir
+
+Onemli:
+- bu duzeltmeler "zorla" degil, aday skorlamasiyla uygulanmali
+- orijinal aday da saklanmali
+
+-------------------------------------------------------------------
+10) TEKRAR AYIKLAMA (TEMPORAL STABILIZATION)
+-------------------------------------------------------------------
+Canli akista ayni plaka art arda farkli okunabilir.
+
+Cozum:
+- kayan pencere (ornek: son 10 frame)
+- ayni track icin okunan metinleri topla
+- voting uygula:
+  - en sik gorulen aday
+  - confidence agirlikli oy
+  - format uygunluguna bonus
+
+Karar kurali ornegi:
+- en az 3 kez gorulduyse ve ortalama confidence > esik ise kabul et.
+
+-------------------------------------------------------------------
+11) COK ULKE PLAKA DOGRULAMA YAKLASIMI
+-------------------------------------------------------------------
+Bu projede sadece Turk plakalari olmayacak.
+Bu nedenle tek regex ile butun sistemi kilitleme.
+
+Onerilen yapi:
+src/ocr/ocr_country_rules.py icinde:
+- ulke bazli kural setleri (regex + uzunluk + karakter dagilimi)
+- country rules map:
+  {
+    "TR": [...],
+    "DE": [...],
+    "FR": [...],
+    "IT": [...],
+    "NL": [...],
+    ...
+  }
+
+Calisma modeli:
+1) OCR metnini normalize et
+2) tum ulke kurallarina karsi puanla
+3) en yuksek puanli ulke + formati country_candidate olarak sec
+4) hicbiri uymazsa "UNKNOWN" ata
+
+Not:
+Ilk surumde 3-5 ulke ile basla, sonra genislet.
+
+-------------------------------------------------------------------
+12) OCR SKORLAMA MANTIGI (BIRLESIK)
+-------------------------------------------------------------------
+Tek basina OCR confidence yeterli degil.
+
+Birlesik skor onerisi:
+final_score =
+  (0.50 * ocr_confidence)
++ (0.30 * format_score)
++ (0.20 * temporal_consistency)
+
+Esik onerisi:
+- final_score >= 0.65 ise "kabul"
+- altinda ise "yeniden oku" / "belirsiz"
+
+Bu agirliklar deneyle ayarlanacak.
+
+-------------------------------------------------------------------
+13) LOG VE IZLENEBILIRLIK
+-------------------------------------------------------------------
+Her okuma icin su alanlari logla:
+- timestamp
+- frame_id
+- raw_text
+- clean_text
+- country_candidate
+- format_score
+- ocr_confidence
+- final_score
+- decision (accept/reject/retry)
+
+Klasor:
+outputs/logs/ocr_events.csv
+
+Fayda:
+- nerede hata oldugunu sonradan net gorursun
+- model iyilestirmesi veriye dayali olur
+
+-------------------------------------------------------------------
+14) TEST SENARYOLARI (OCR)
+-------------------------------------------------------------------
+Test-1: Temiz goruntu
+- beklenen: yuksek confidence, dogru metin
+
+Test-2: Dusuk isik
+- beklenen: preprocess varyantlari ile kurtarma
+
+Test-3: Hareketli/blur
+- beklenen: tek frame hatasi olabilir, temporal voting duzeltmeli
+
+Test-4: Benzer karakterli plakalar
+- beklenen: O/0, I/1 duzeltme kurallari etkili olmali
+
+Test-5: Farkli ulke plaka ornekleri
+- beklenen: country_candidate dogru veya UNKNOWN
+
+-------------------------------------------------------------------
+15) KABUL KRITERLERI (BU DOKUMAN)
+-------------------------------------------------------------------
+[ ] OCR ham okuma calisiyor
+[ ] normalize fonksiyonu calisiyor
+[ ] karakter karisiklik duzeltme modulu var
+[ ] temporal tekrar ayiklama var
+[ ] en az 3 ulke icin format kurali tanimli
+[ ] birlesik skorla accept/reject karari uretiliyor
+[ ] log dosyasina kayit atiliyor
+
+-------------------------------------------------------------------
+16) SIK HATALAR VE COZUMLER
+-------------------------------------------------------------------
+Hata 1: OCR hic metin dondurmuyor
+Cozum:
+- crop cok kucuk olabilir; bbox margin ekle.
+- preprocess varyantlarini dene.
+
+Hata 2: Metin surekli farkli cikiyor
+Cozum:
+- temporal voting penceresini buyut (10 -> 15 frame).
+- confidence esigini yukselt.
+
+Hata 3: Yanlis karakter duzeltmesi
+Cozum:
+- duzeltmeyi bolge-bazli (harf/rakam slot) yap.
+- zorlamali donusum yerine aday puanlamasi kullan.
+
+Hata 4: Ulke formati surekli UNKNOWN
+Cozum:
+- normalize sonrasi metin uzunlugunu kontrol et.
+- kurallari esnetilmis regex ile yeniden yaz.
+
+-------------------------------------------------------------------
+17) SONRAKI DOKUMAN
+-------------------------------------------------------------------
+Dokuman-04 kapsam:
+- Web uygulama mimarisi (kullanici, arac, abonelik)
+- fake odeme akisi
+- admin paneli
+- veritabani semasi
+- OCR sonucunun abonelik kontrolu ile birlestirilmesi
+
+Dokuman-03 Sonu
+
+-------------------------------------------------------------------
+18) OCR KPI VE TEST PROTOKOLU (ZORUNLU)
+-------------------------------------------------------------------
+Bu bolumle OCR kalitesi "iyi/kotu" yoruma degil metriklere baglanir.
+
+KPI hedefleri:
+- TR exact-match: >= %97
+- EU karma exact-match: >= %94
+- Character accuracy: >= %98.5
+- Unknown/retry: <= %8
+- False accept'e sebep olan OCR hatasi: <= %0.3
+
+Test set kurali:
+- Test seti egitimde kullanilmamis goruntulerden olusmali.
+- En az 2 ayri set:
+  1) TR agirlikli
+  2) Avrupa karma (DE/FR/IT/NL en az)
+
+Rapor dosyasi:
+- outputs/logs/ocr_eval_report.csv
+
+CSV alanlari:
+- image_id
+- gt_plate
+- pred_plate
+- country_gt
+- country_pred
+- exact_match (0/1)
+- char_acc
+- final_score
+
+Kabul kurali:
+- Tum KPI hedefleri ayni anda saglanmadan "uretimi hazir" denmez.
+
+-------------------------------------------------------------------
+19) ULKE FORMAT ORNEK TABLOSU (ILK SURUM)
+-------------------------------------------------------------------
+Not: Bu tablo format dogrulama icin baslangic referansidir.
+Kesin hukuki format listesi degildir; operasyonel kurallar ayrica guncellenir.
+
+| Ulke | Baslangic Kurali (ornek) | Not |
+|---|---|---|
+| TR | 2 rakam + 1-3 harf + 2-4 rakam | Il kodu + harf/rakam |
+| DE | 1-3 harf + 1-2 harf + 1-4 rakam | Tire/space normalize edilir |
+| FR | 2 harf + 3 rakam + 2 harf | Yeni format agirlikli |
+| IT | 2 harf + 3 rakam + 2 harf | Standart seri |
+| NL | 6 karakter, harf-rakam karisik paternler | Birden cok pattern vardir |
+
+Uygulama notu:
+- Regex tek basina yeterli degil.
+- format_score = regex_uyumu + uzunluk_uyumu + karakter_dagilimi ile hesaplanir.

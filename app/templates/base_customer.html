@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Müşteri Portalı{% endblock %} | CanPark</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: { extend: { colors: {
+        "primary": "#adc6ff", "primary-container": "#4d8eff",
+        "surface": "#111319", "surface-container": "#1e1f26",
+        "surface-container-low": "#191b22", "surface-container-high": "#282a30",
+        "surface-container-highest": "#33343b", "surface-container-lowest": "#0c0e14",
+        "on-surface": "#e2e2eb", "on-surface-variant": "#c2c6d6",
+        "outline-variant": "#424754", "outline": "#8c909f",
+        "tertiary": "#4edea3", "tertiary-container": "#00a572",
+        "tertiary-fixed-dim": "#4edea3", "error": "#ffb4ab",
+        "error-container": "#93000a", "on-error-container": "#ffdad6",
+        "secondary-container": "#42474f",
+      }}}
+    }
+  </script>
+  <style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    body { background-color: #111319; color: #e2e2eb; font-family: 'Inter', sans-serif; }
+    html:not(.dark) body { background-color: #f4f6fb; color: #1a1c23; }
+    html:not(.dark) header { background-color: #f0f2f9 !important; }
+    html:not(.dark) .bg-\[#191b22\] { background-color: #eef0f8 !important; }
+    html:not(.dark) .bg-\[#1e1f26\] { background-color: #e8eaf4 !important; }
+    html:not(.dark) .bg-\[#0c0e14\] { background-color: #dde0ee !important; }
+    html:not(.dark) .text-\[#c2c6d6\] { color: #3a3d52 !important; }
+    html:not(.dark) .text-\[#8c909f\] { color: #6b6f82 !important; }
+    html:not(.dark) .text-white { color: #0f1117 !important; }
+    .ghost-border { border: 1px solid rgba(66, 71, 84, 0.15); }
+    .signature-glow { box-shadow: 0 0 20px rgba(77, 142, 255, 0.10); }
+    .plate-font { font-family: 'Courier New', monospace; letter-spacing: 0.12em; }
+    *, *::before, *::after { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+    .material-symbols-outlined { transition: none !important; }
+  </style>
+  <script src="/static/js/app.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen" x-data x-init="$store.app.init()">
+
+<header class="bg-[#191b22] h-16 flex items-center justify-between px-6 ghost-border sticky top-0 z-40">
+  <a href="/musteri/dashboard" class="text-xl font-bold text-primary tracking-tighter">CanPark</a>
+  <nav class="flex items-center gap-4 text-sm">
+    <a href="/musteri/dashboard" class="text-[#c2c6d6] hover:text-white transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">home</span>
+      <span x-text="$store.app.t('nav_dashboard')">Dashboard</span>
+    </a>
+    <a href="/musteri/subscriptions" class="text-[#c2c6d6] hover:text-white transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">card_membership</span>
+      <span x-text="$store.app.t('portal_my_subs')">Aboneliklerim</span>
+    </a>
+    <a href="/musteri/sessions" class="text-[#c2c6d6] hover:text-white transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">history</span>
+      <span x-text="$store.app.t('portal_my_sessions')">Geçmişim</span>
+    </a>
+
+    <!-- Theme toggle -->
+    <button @click="$store.app.toggleTheme()"
+            class="w-8 h-8 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:bg-[#282a30] transition-colors">
+      <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+    </button>
+
+    <!-- Language toggle -->
+    <button @click="$store.app.toggleLang()"
+            class="h-8 px-2.5 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:bg-[#282a30] transition-colors">
+      <span class="text-xs font-bold text-[#c2c6d6]" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+    </button>
+
+    <a href="/logout" class="text-[#c2c6d6] hover:text-white transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">logout</span>
+      <span x-text="$store.app.t('nav_logout')">Çıkış</span>
+    </a>
+  </nav>
+</header>
+
+<main class="max-w-4xl mx-auto px-6 py-10 space-y-8">
+  {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

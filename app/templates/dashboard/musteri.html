@@ -1,0 +1,65 @@
+{% extends "base_customer.html" %}
+{% block title %}Müşteri Paneli{% endblock %}
+{% block content %}
+
+<div>
+  <h1 class="text-2xl font-bold text-white">Hoş Geldiniz, {{ customer.full_name }}</h1>
+  <p class="text-[#8c909f] text-sm mt-1">Araçlarınız ve aboneliklerinizi buradan yönetebilirsiniz.</p>
+</div>
+
+{% for v in vehicles %}
+<div class="bg-[#1e1f26] rounded-3xl p-6 ghost-border">
+  <div class="flex items-start justify-between mb-5">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-primary-container/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary">directions_car</span>
+      </div>
+      <div>
+        <h3 class="font-mono font-bold text-white text-lg">{{ v.plate_display }}</h3>
+        <p class="text-sm text-[#8c909f]">{{ v.brand or '' }} {{ v.model or '' }} · {{ v.vehicle_type }}</p>
+      </div>
+    </div>
+  </div>
+
+  {% set active_subs = v.subscriptions | selectattr('is_active') | list %}
+  {% if active_subs %}
+    {% set sub = active_subs[0] %}
+    <div class="bg-[#0c0e14] rounded-2xl p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 1;">verified</span>
+        <div>
+          <p class="text-sm font-semibold text-tertiary-fixed-dim">{{ sub.plan.name if sub.plan else '—' }}</p>
+          <p class="text-xs text-[#8c909f]">{{ sub.end_date.strftime('%d.%m.%Y') }}'e kadar geçerli · {{ sub.days_remaining }} gün kaldı</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-tertiary-container/10 text-tertiary">AKTİF</span>
+    </div>
+    {% if sub.days_remaining <= 7 %}
+    <div class="mt-3 p-3 bg-[#f59e0b]/10 rounded-xl text-[#f59e0b] text-xs flex items-center gap-2">
+      <span class="material-symbols-outlined text-sm">warning</span>
+      Aboneliğiniz {{ sub.days_remaining }} gün içinde sona eriyor.
+      <a href="/musteri/subscriptions" class="underline font-semibold">Uzat</a>
+    </div>
+    {% endif %}
+  {% else %}
+    <div class="bg-[#0c0e14] rounded-2xl p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-error">cancel</span>
+        <p class="text-sm text-[#8c909f]">Aktif abonelik yok</p>
+      </div>
+      <a href="/musteri/subscriptions"
+         class="text-xs font-bold px-3 py-1.5 rounded-xl bg-primary text-on-primary hover:brightness-110 transition-all">
+        Abonelik Al
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="bg-[#1e1f26] rounded-3xl p-10 ghost-border text-center">
+  <span class="material-symbols-outlined text-5xl text-[#424754] mb-4 block">directions_car</span>
+  <p class="text-[#8c909f]">Henüz kayıtlı aracınız yok.</p>
+  <p class="text-[#8c909f] text-sm mt-1">Kasiyerden araç kaydettirmenizi isteyin.</p>
+</div>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,300 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Dokuman 01: Gelistirme Ortami Kurulumu ve Dataset Indirme Rehberi
+Surum: v1.0
+
+-------------------------------------------------------------------
+1) DOKUMAN AMACI
+-------------------------------------------------------------------
+Bu dokumanin amaci, projeye sifirdan baslayan bir kisinin:
+- gelistirme ortamini hatasiz kurmasi,
+- gerekli kutuphaneleri yuklemesi,
+- secilen dataseti indirmesi,
+- veri klasorlerini duzenlemesi,
+- veri hazirligini ilk egitim asamasina uygun hale getirmesidir.
+
+Bu dokuman tamamlandiginda beklenen sonuc:
+- Python ortami hazir,
+- OpenCV + Ultralytics + EasyOCR kurulu,
+- CCPD dataset indirilmeye hazir veya indirilmis,
+- proje klasor yapisi belirlenmis,
+- bir sonraki dokumana (egitim ve pipeline) gecise uygun temel hazir.
+
+-------------------------------------------------------------------
+2) ON KABULLER
+-------------------------------------------------------------------
+Isletim Sistemi: Windows 10/11
+Terminal: PowerShell
+Proje klasoru:
+C:\Users\Can Parmak\Desktop\PlateDetectionSystem
+
+Not:
+Bu dokuman baslangicta CPU uzerinden calismayi garantiler.
+GPU (NVIDIA CUDA) sonraki asamada eklenebilir.
+
+-------------------------------------------------------------------
+3) KULLANILACAK TEMEL TEKNOLOJILER
+-------------------------------------------------------------------
+- Python 3.10 veya 3.11
+- pip (paket yoneticisi)
+- venv (sanal ortam)
+- OpenCV
+- Ultralytics (YOLO)
+- EasyOCR
+- Numpy, Pandas, Matplotlib (yardimci analiz)
+- PyTorch (YOLO ve OCR altyapisi)
+
+-------------------------------------------------------------------
+4) ON HAZIRLIK: PYTHON KONTROLU
+-------------------------------------------------------------------
+PowerShell ac ve asagidaki komutlari calistir:
+
+1) Python surumu:
+   py --version
+   veya
+   python --version
+
+Beklenen:
+- Python 3.10.x veya 3.11.x
+
+2) pip kontrolu:
+   py -m pip --version
+
+Eger Python kurulu degilse:
+- https://www.python.org/downloads/ adresinden indir,
+- kurulumda "Add Python to PATH" secenegini isaretle.
+
+-------------------------------------------------------------------
+5) PROJE KLASOR YAPISI
+-------------------------------------------------------------------
+Asagidaki klasorleri olustur:
+
+PlateDetectionSystem/
+  docs/
+  data/
+    raw/
+      ccpd/
+    interim/
+    processed/
+  models/
+    yolo/
+    ocr/
+  notebooks/
+  src/
+    detection/
+    ocr/
+    postprocess/
+    integration/
+  outputs/
+    logs/
+    runs/
+  scripts/
+
+PowerShell ile olusturmak icin:
+mkdir data,models,notebooks,src,outputs,scripts
+mkdir data\raw,data\interim,data\processed
+mkdir data\raw\ccpd
+mkdir models\yolo,models\ocr
+mkdir src\detection,src\ocr,src\postprocess,src\integration
+mkdir outputs\logs,outputs\runs
+
+-------------------------------------------------------------------
+6) SANAL ORTAM (VENV) OLUSTURMA
+-------------------------------------------------------------------
+Proje klasorunde:
+
+1) Venv olustur:
+   py -m venv .venv
+
+2) Venv aktive et:
+   .\.venv\Scripts\Activate.ps1
+
+3) PowerShell policy hatasi olursa:
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   Sonra tekrar:
+   .\.venv\Scripts\Activate.ps1
+
+4) pip guncelle:
+   python -m pip install --upgrade pip setuptools wheel
+
+Beklenen sonuc:
+- Terminal satirinda (.venv) gorunur.
+
+-------------------------------------------------------------------
+7) GEREKLI KUTUPHANELERIN KURULUMU
+-------------------------------------------------------------------
+Asagidaki paketleri kur:
+
+python -m pip install numpy pandas matplotlib opencv-python pillow pyyaml
+python -m pip install ultralytics
+python -m pip install easyocr
+
+PyTorch kurulumu:
+CPU icin:
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+Not:
+GPU kullanacaksan CUDA uyumlu paketler daha sonra ayrica kurulacak.
+
+-------------------------------------------------------------------
+8) KURULUM DOGRULAMA TESTLERI
+-------------------------------------------------------------------
+8.1) Python import testi
+Terminalde:
+python
+
+Sonra:
+import cv2
+import torch
+import easyocr
+from ultralytics import YOLO
+print("Kurulum basarili")
+exit()
+
+Hata yoksa kutuphaneler dogru kurulmustur.
+
+8.2) Torch cihaz testi
+python -c "import torch; print('CUDA:', torch.cuda.is_available())"
+
+Beklenen:
+- CPU kurulumunda genelde False olur (normal).
+
+-------------------------------------------------------------------
+9) SECILEN DATASET: CCPD
+-------------------------------------------------------------------
+Bu projede ilk ana dataset olarak CCPD secilmistir.
+
+Dataset ana sayfa:
+https://zenodo.org/records/15647076
+
+Dogrudan indirme linkleri:
+- CCPD2019:
+  https://zenodo.org/records/15647076/files/CCPD2019.tar.xz?download=1
+- CCPD2020:
+  https://zenodo.org/records/15647076/files/CCPD2020.zip?download=1
+
+-------------------------------------------------------------------
+10) DATASET INDIRME ADIMLARI (WINDOWS)
+-------------------------------------------------------------------
+Yontem A - Tarayici ile:
+1) Yukaridaki linkleri ac.
+2) Dosyalari indir.
+3) Dosyalari su klasore tasi:
+   data\raw\ccpd\
+
+Yontem B - PowerShell ile:
+ornek:
+Invoke-WebRequest -Uri "https://zenodo.org/records/15647076/files/CCPD2020.zip?download=1" -OutFile "data\raw\ccpd\CCPD2020.zip"
+
+Not:
+CCPD2019 buyuk oldugu icin indirme uzun surebilir.
+
+-------------------------------------------------------------------
+11) DATASET ACMA (EXTRACT)
+-------------------------------------------------------------------
+11.1) ZIP acma (CCPD2020)
+Expand-Archive -Path "data\raw\ccpd\CCPD2020.zip" -DestinationPath "data\raw\ccpd\CCPD2020"
+
+11.2) TAR.XZ acma (CCPD2019)
+Windows'ta tar destekli ise:
+tar -xf "data\raw\ccpd\CCPD2019.tar.xz" -C "data\raw\ccpd"
+
+Eger tar.xz acilmazsa:
+- 7-Zip kur,
+- dosyayi iki asamada ac:
+  1) .tar.xz -> .tar
+  2) .tar -> klasor
+
+-------------------------------------------------------------------
+12) DATASET BUTUNLUK KONTROLU
+-------------------------------------------------------------------
+Istege bagli MD5 kontrol:
+
+CCPD2019 beklenen md5:
+0dfbca0e6fcb7cb8ea720b0eae94c735
+
+CCPD2020 beklenen md5:
+eb93e88c5988879f8da6f92bbf083324
+
+PowerShell:
+Get-FileHash "data\raw\ccpd\CCPD2020.zip" -Algorithm MD5
+
+-------------------------------------------------------------------
+13) ILK VERI DUZENLEME (MINIMUM)
+-------------------------------------------------------------------
+Hedef:
+Veriyi egitimden once kontrollu bir yapiya almak.
+
+Asgari adimlar:
+1) Ham veriyi data/raw/ccpd altinda sakla (degistirme).
+2) Isleme alinacak kopyalari data/interim altina olustur.
+3) Train/val/test listeleri scripts ile uretilecek (bir sonraki dokuman).
+
+Onemli kural:
+- data/raw altindaki orijinal dosyalara dogrudan mudahale etme.
+
+-------------------------------------------------------------------
+14) GEREKLI DOSYALAR (BU ASAMADA)
+-------------------------------------------------------------------
+Bu asama sonunda projede su dosyalar olmalidir:
+
+1) requirements.txt
+2) README_kurulum.txt (opsiyonel kisa ozet)
+3) data/raw/ccpd/... (indirilen dataset)
+
+Ornek requirements.txt icerigi:
+numpy
+pandas
+matplotlib
+opencv-python
+pillow
+pyyaml
+ultralytics
+easyocr
+torch
+torchvision
+torchaudio
+
+-------------------------------------------------------------------
+15) SIK KARSILASILAN HATALAR VE COZUMLER
+-------------------------------------------------------------------
+Hata 1: "python komutu bulunamadi"
+Cozum:
+- Python PATH'e eklenmemis olabilir.
+- py komutunu dene veya Python'i PATH secenegi ile yeniden kur.
+
+Hata 2: EasyOCR kurulumunda torch bagimliligi sorunu
+Cozum:
+- once torch kur, sonra easyocr kur.
+
+Hata 3: tar.xz acilmiyor
+Cozum:
+- 7-Zip ile ac veya guncel Windows tar araci kullan.
+
+Hata 4: Disk dolu
+Cozum:
+- CCPD buyuktur; en az 30+ GB bos alan onerilir.
+
+-------------------------------------------------------------------
+16) BU DOKUMANIN CIKTISI (DONE KRITERI)
+-------------------------------------------------------------------
+Asagidaki maddelerin tamami Evet ise Dokuman-01 tamam:
+
+[ ] Python ve pip hazir
+[ ] .venv olusturuldu ve aktif
+[ ] Temel kutuphaneler kuruldu
+[ ] Import testleri gecti
+[ ] CCPD indirildi
+[ ] Dosyalar acildi
+[ ] data/raw/ccpd yapisi olustu
+[ ] MD5 (opsiyonel) kontrol edildi
+
+-------------------------------------------------------------------
+17) SONRAKI DOKUMAN
+-------------------------------------------------------------------
+Dokuman-02'de ele alinacak:
+- Datasetten egitim icin alt kume hazirlama
+- YOLO veri formatina donusum
+- Ilk plaka tespit modeli egitimi
+- Ilk inference ve kalite olcumu
+
+Dokuman-01 Sonu

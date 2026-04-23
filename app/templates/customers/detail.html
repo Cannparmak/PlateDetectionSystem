@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.full_name }}{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-start justify-between">
+  <div class="flex items-center gap-4">
+    <a href="/customers" class="text-[#8c909f] hover:text-white transition-colors">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    </a>
+    <div class="w-14 h-14 rounded-2xl bg-primary-container/10 flex items-center justify-center">
+      <span class="material-symbols-outlined text-primary text-2xl">person</span>
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-white">{{ customer.full_name }}</h1>
+      <p class="text-[#8c909f] text-sm">
+        #{{ customer.id }}
+        {% if customer.phone %} · {{ customer.phone }}{% endif %}
+        {% if customer.email %} · {{ customer.email }}{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="flex gap-3">
+    <a href="/customers/{{ customer.id }}/edit"
+       class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+      <span class="material-symbols-outlined text-base">edit</span> Düzenle
+    </a>
+    <a href="/vehicles/new?customer_id={{ customer.id }}"
+       class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-primary text-on-primary text-sm font-bold hover:brightness-110 active:scale-95 transition-all glow-active">
+      <span class="material-symbols-outlined text-base">add</span> Araç Ekle
+    </a>
+  </div>
+</div>
+
+<!-- Info cards -->
+<div class="grid grid-cols-3 gap-6">
+  <div class="bg-surface-container rounded-3xl p-5 ghost-border">
+    <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-3">Kişisel</p>
+    <div class="space-y-2">
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">T.C. No</span>
+        <span class="text-[#c2c6d6]">{{ customer.tc_no or '—' }}</span>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">Kayıt</span>
+        <span class="text-[#c2c6d6]">{{ customer.created_at.strftime('%d.%m.%Y') }}</span>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">Durum</span>
+        <span class="{% if customer.is_active %}text-tertiary{% else %}text-error{% endif %} font-semibold">
+          {{ 'Aktif' if customer.is_active else 'Pasif' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-surface-container rounded-3xl p-5 ghost-border">
+    <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-3">İletişim</p>
+    <div class="space-y-2">
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">Telefon</span>
+        <span class="text-[#c2c6d6]">{{ customer.phone or '—' }}</span>
+      </div>
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">E-posta</span>
+        <span class="text-[#c2c6d6] text-xs">{{ customer.email or '—' }}</span>
+      </div>
+    </div>
+    {% if customer.address %}
+    <p class="text-xs text-[#8c909f] mt-3 leading-relaxed">{{ customer.address }}</p>
+    {% endif %}
+  </div>
+
+  <div class="bg-surface-container rounded-3xl p-5 ghost-border">
+    <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-3">Özet</p>
+    <div class="space-y-2">
+      {% set active_vehicles = customer.vehicles | selectattr('is_active') | list %}
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">Araç</span>
+        <span class="text-white font-bold">{{ active_vehicles | length }}</span>
+      </div>
+      {% set all_subs = [] %}
+      {% for v in active_vehicles %}{% for s in v.subscriptions %}{% if s.is_active %}{% set _ = all_subs.append(s) %}{% endif %}{% endfor %}{% endfor %}
+      <div class="flex justify-between text-sm">
+        <span class="text-[#8c909f]">Aktif Abonelik</span>
+        <span class="{% if all_subs %}text-tertiary{% else %}text-[#8c909f]{% endif %} font-bold">{{ all_subs | length }}</span>
+      </div>
+    </div>
+    {% if customer.notes %}
+    <p class="text-xs text-[#8c909f] mt-3 leading-relaxed italic">{{ customer.notes }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Vehicles -->
+<div>
+  <h3 class="text-base font-bold text-white mb-4">Araçlar</h3>
+  <div class="space-y-4">
+    {% for v in customer.vehicles if v.is_active %}
+    <div class="bg-surface-container-low rounded-3xl p-5 ghost-border">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary-container/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-lg">directions_car</span>
+          </div>
+          <div>
+            <p class="font-mono font-bold text-white text-lg plate-font">{{ v.plate_display }}</p>
+            <p class="text-xs text-[#8c909f]">{{ v.brand or '' }} {{ v.model or '' }}{% if v.brand or v.model %} · {% endif %}{{ v.vehicle_type }}</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <a href="/subscriptions/new?vehicle_id={{ v.id }}"
+             class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all">
+            <span class="material-symbols-outlined text-sm">add_card</span> Abonelik
+          </a>
+          <a href="/vehicles/{{ v.id }}/edit"
+             class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1e1f26] ghost-border text-xs font-bold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+            <span class="material-symbols-outlined text-sm">edit</span> Düzenle
+          </a>
+          {% if user.role == 'admin' %}
+          <form method="post" action="/vehicles/{{ v.id }}/delete" onsubmit="return confirm('Bu aracı silmek istediğinizden emin misiniz?')">
+            <button type="submit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-error-container/10 text-error text-xs font-bold hover:bg-error-container/20 transition-all">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Subscriptions for this vehicle -->
+      {% set active_subs = v.subscriptions | selectattr('is_active') | list %}
+      {% if active_subs %}
+        {% set sub = active_subs[0] %}
+        <div class="bg-[#0c0e14] rounded-2xl p-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-tertiary text-base" style="font-variation-settings:'FILL' 1;">verified</span>
+            <div>
+              <p class="text-sm font-semibold text-tertiary-fixed-dim">{{ sub.plan.name if sub.plan else '—' }}</p>
+              <p class="text-xs text-[#8c909f]">{{ sub.end_date.strftime('%d.%m.%Y') }}'e kadar · {{ sub.days_remaining }} gün</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary">AKTİF</span>
+        </div>
+      {% else %}
+        <div class="bg-[#0c0e14] rounded-2xl p-3.5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-error text-base">cancel</span>
+          <p class="text-sm text-[#8c909f]">Aktif abonelik yok</p>
+        </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="bg-surface-container-low rounded-3xl p-10 ghost-border text-center">
+      <span class="material-symbols-outlined text-4xl text-[#424754] block mb-2">directions_car</span>
+      <p class="text-[#8c909f] text-sm">Bu müşteriye ait aktif araç yok.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if user.role == 'admin' %}
+<div class="pt-4 border-t border-outline-variant/10">
+  <form method="post" action="/customers/{{ customer.id }}/delete"
+        onsubmit="return confirm('{{ customer.full_name }} adlı müşteriyi ve tüm araç/abonelik kayıtlarını kalıcı olarak silmek istediğinizden emin misiniz?\n\nBu işlem GERİ ALINAMAZ!')">
+    <button type="submit" class="text-sm text-error hover:text-[#ff6b6b] transition-colors flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-base">delete_forever</span>
+      Müşteriyi Kalıcı Sil
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{% endblock %}

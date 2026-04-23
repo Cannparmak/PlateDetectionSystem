@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Müşteriler{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('cust_title')">Müşteriler</h1>
+    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ customers | length }} <span x-text="$store.app.t('lbl_records')">kayıt</span></p>
+  </div>
+  <a href="/customers/new"
+     class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+    <span class="material-symbols-outlined text-xl">person_add</span>
+    <span x-text="$store.app.t('cust_new')">Yeni Müşteri</span>
+  </a>
+</div>
+
+<!-- Search -->
+<div class="relative">
+  <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#8c909f] text-xl">search</span>
+  <form method="get" action="/customers">
+    <input type="text" name="search" value="{{ search }}"
+           placeholder="İsim, telefon ara..."
+           class="w-full bg-[#1e1f26] rounded-2xl ghost-border pl-12 pr-4 py-3.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+  </form>
+</div>
+
+<!-- Table -->
+<div class="bg-surface-container-low rounded-3xl overflow-hidden ghost-border">
+  <div class="grid grid-cols-5 px-6 py-3 bg-[#0c0e14] text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+    <div x-text="$store.app.t('lbl_customer')">Müşteri</div>
+    <div x-text="$store.app.t('cust_phone')">Telefon</div>
+    <div x-text="$store.app.t('cust_email')">E-posta</div>
+    <div x-text="$store.app.t('lbl_vehicle')">Araç</div>
+    <div class="text-right" x-text="$store.app.t('lbl_action')">İşlem</div>
+  </div>
+  <div class="divide-y divide-outline-variant/10">
+    {% for c in customers %}
+    <div class="grid grid-cols-5 px-6 py-4 items-center hover:bg-surface-container-high transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-primary-container/10 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-primary text-base">person</span>
+        </div>
+        <div>
+          <p class="text-sm font-semibold" style="color:var(--text-primary)">{{ c.full_name }}</p>
+          <p class="text-xs" style="color:var(--text-subtle)">#{{ c.id }}</p>
+        </div>
+      </div>
+      <div class="text-sm text-[#c2c6d6]">{{ c.phone or '—' }}</div>
+      <div class="text-sm text-[#c2c6d6]">{{ c.email or '—' }}</div>
+      <div class="flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[#8c909f] text-base">directions_car</span>
+        <span class="text-sm text-[#c2c6d6]">{{ c.vehicles | selectattr('is_active') | list | length }}</span>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <a href="/customers/{{ c.id }}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1e1f26] ghost-border text-xs font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+          <span class="material-symbols-outlined text-sm">open_in_new</span>
+          Detay
+        </a>
+        {% if user.role == 'admin' %}
+        <form method="post" action="/customers/{{ c.id }}/delete"
+              onsubmit="return confirm('{{ c.full_name }} adlı müşteriyi kalıcı olarak silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!')">
+          <button type="submit"
+                  class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-error-container/10 text-error text-xs font-semibold hover:bg-error-container/25 transition-all">
+            <span class="material-symbols-outlined text-sm">delete</span>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="px-6 py-16 text-center">
+      <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">group</span>
+      <p class="text-[#8c909f]">
+        {% if search %}Arama sonucu bulunamadı.{% else %}Henüz kayıtlı müşteri yok.{% endif %}
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

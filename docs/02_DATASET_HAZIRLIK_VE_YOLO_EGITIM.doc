@@ -1,0 +1,328 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Dokuman 02: Dataset Hazirlama, YOLO Formati ve Ilk Egitim Rehberi
+Surum: v1.0
+
+-------------------------------------------------------------------
+1) DOKUMAN AMACI
+-------------------------------------------------------------------
+Bu dokumanin amaci:
+- indirilen CCPD verisini egitime uygun hale getirmek,
+- YOLO object detection formatina donusturmek,
+- train/val/test ayrimini olusturmak,
+- ilk YOLO plaka tespit egitimini baslatmak,
+- ilk inference ve temel kalite kontrolunu yapmaktir.
+
+Dokuman-01 tamamlanmis olmali:
+- Python ortami hazir
+- kutuphaneler kurulu
+- CCPD indirildi ve acildi
+
+-------------------------------------------------------------------
+2) HEDEF CIKTI
+-------------------------------------------------------------------
+Bu dokuman sonunda su ciktilar beklenir:
+- data/processed/yolo_plate_dataset klasoru olusmus
+- train/val/test image-label yapisi hazir
+- dataset.yaml hazir
+- ilk YOLO egitimi baslatilmis
+- runs altinda ilk egitim ciktilari olusmus
+- ornek goruntulerde plaka kutulari goruluyor
+
+-------------------------------------------------------------------
+3) VERI YAPISI STANDARTI
+-------------------------------------------------------------------
+Bu dokumanda kullanilacak hedef klasor yapisi:
+
+data/
+  raw/
+    ccpd/
+      ... (orijinal dosyalar)
+  interim/
+    ccpd_sample/
+      images/
+      labels/
+  processed/
+    yolo_plate_dataset/
+      images/
+        train/
+        val/
+        test/
+      labels/
+        train/
+        val/
+        test/
+      dataset.yaml
+
+Onemli kural:
+- data/raw altina dokunma.
+- Tum donusumler data/interim veya data/processed altinda yapilir.
+
+-------------------------------------------------------------------
+4) CCPD ETIKET MANTIGI (TEMEL)
+-------------------------------------------------------------------
+CCPD'de anotasyon bilgisi dosya adina gomulu olabilir.
+Bu nedenle:
+- dogrudan klasor kopyalamak yetmez,
+- dosya adindan bbox bilgisini parse edip YOLO label dosyasi uretmek gerekir.
+
+YOLO label satiri formati:
+class_id x_center y_center width height
+
+Not:
+- tum koordinatlar normalize edilmistir (0-1 arasi).
+- bu asamada tek sinif var: plate (class_id = 0).
+
+-------------------------------------------------------------------
+5) GEREKLI SCRIPT DOSYALARI
+-------------------------------------------------------------------
+Bu dokuman kapsaminda su scriptler olusturulacak:
+
+scripts/
+  01_prepare_ccpd_sample.py
+  02_convert_ccpd_to_yolo.py
+  03_split_dataset.py
+  04_train_yolo.py
+  05_inference_test.py
+
+-------------------------------------------------------------------
+6) ORNEK VERI ILE BASLAMA (ONERI)
+-------------------------------------------------------------------
+CCPD buyuk oldugu icin once kucuk bir alt kume ile basla:
+- 3.000 - 10.000 goruntu ile ilk deneme
+- pipeline dogrulaninca tam veriye cik
+
+Sebep:
+- hizli iterasyon
+- hatalari erken yakalama
+- bilgisayar kaynagini verimli kullanma
+
+-------------------------------------------------------------------
+7) ADIM 1 - ORNEK KOPYA HAZIRLAMA
+-------------------------------------------------------------------
+Amaç:
+raw altindan secilen goruntuleri interim altina kopyalamak.
+
+PowerShell ornek:
+mkdir data\interim\ccpd_sample
+mkdir data\interim\ccpd_sample\images
+
+Not:
+Ilk etapta tek bir CCPD alt klasorunden baslamak yeterli.
+
+Script gorevi (01_prepare_ccpd_sample.py):
+- kaynak klasoru tara
+- desteklenen uzantilari filtrele (.jpg, .jpeg, .png)
+- rastgele N dosya sec
+- data/interim/ccpd_sample/images altina kopyala
+
+-------------------------------------------------------------------
+8) ADIM 2 - CCPD DOSYA ADINDAN BBOX PARSE ETME
+-------------------------------------------------------------------
+Amaç:
+CCPD dosya adindan plaka koordinatini alip YOLO formatina cevirmek.
+
+Script gorevi (02_convert_ccpd_to_yolo.py):
+- image dosya adindan bbox koordinatlarini ayikla
+- goruntu boyutunu oku (cv2 ile)
+- normalize et:
+  x_center = (x_min + x_max) / 2 / img_w
+  y_center = (y_min + y_max) / 2 / img_h
+  width    = (x_max - x_min) / img_w
+  height   = (y_max - y_min) / img_h
+- label dosyasi olustur:
+  data/interim/ccpd_sample/labels/<image_adi>.txt
+- icerik:
+  0 x_center y_center width height
+
+Kalite kontrol:
+- en az 50 gorselde label var mi kontrol et
+- koordinatlar 0-1 disina cikmis mi kontrol et
+
+-------------------------------------------------------------------
+9) ADIM 3 - TRAIN/VAL/TEST BOLME
+-------------------------------------------------------------------
+Amaç:
+egitim ve test dagilimini standartlastirmak.
+
+Onerilen oran:
+- train: 70%
+- val: 20%
+- test: 10%
+
+Script gorevi (03_split_dataset.py):
+- image ve label ciftlerini eslestir
+- eksik label olanlari logla
+- rastgele karistir (seed sabit: 42)
+- hedef klasore tasi/kopyala:
+  data/processed/yolo_plate_dataset/images/train
+  data/processed/yolo_plate_dataset/images/val
+  data/processed/yolo_plate_dataset/images/test
+  data/processed/yolo_plate_dataset/labels/train
+  data/processed/yolo_plate_dataset/labels/val
+  data/processed/yolo_plate_dataset/labels/test
+
+Onemli:
+- image-label birebir eslesmeli.
+- bos label dosyasi olmamali.
+
+-------------------------------------------------------------------
+10) ADIM 4 - DATASET.YAML OLUSTURMA
+-------------------------------------------------------------------
+data/processed/yolo_plate_dataset/dataset.yaml icerigi:
+
+path: C:/Users/Can Parmak/Desktop/PlateDetectionSystem/data/processed/yolo_plate_dataset
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: plate
+
+Not:
+- Windows'ta slash kullanimi karisiklik yaratmasin diye path'i net yaz.
+
+-------------------------------------------------------------------
+11) ADIM 5 - YOLO ILK EGITIM
+-------------------------------------------------------------------
+Script gorevi (04_train_yolo.py):
+- Ultralytics YOLO modelini yukle
+- dataset.yaml ile egitim baslat
+
+Baslangic parametre onerisi (guvenli):
+- model: yolo11n.pt (yoksa yolo8n.pt kullan)
+- imgsz: 640
+- batch: 16 (RAM/GPU durumuna gore 8 de olabilir)
+- epochs: 30 (ilk deneme)
+- device: cpu (ilk asama)
+- project: outputs/runs
+- name: plate_det_v1
+
+Ornek komut:
+python scripts/04_train_yolo.py --device auto
+(auto: CUDA varsa GPU, yoksa CPU)
+
+Beklenen cikti:
+- outputs/runs/plate_det_v1/...
+- best.pt ve last.pt agirlik dosyalari
+
+-------------------------------------------------------------------
+12) ADIM 6 - ILK INFERENCE TESTI
+-------------------------------------------------------------------
+Script gorevi (05_inference_test.py):
+- egitimden gelen best.pt yukle (yol: weights_utils.py ile otomatik aranabilir)
+- data/processed/yolo_plate_dataset/images/test klasorundaki gorsellerde tahmin
+- kutulu ciktilari kaydet
+
+Ornek komut:
+python scripts/05_inference_test.py
+
+Opsiyonel - kamera / tek dosya / video ile deneme (06_camera_predict.py):
+- Webcam: python scripts/06_camera_predict.py --source 0
+- Foto yolu: python scripts/06_camera_predict.py --source "C:\\yol\\foto.jpg"
+- Video: python scripts/06_camera_predict.py --source "C:\\yol\\video.mp4"
+- Tablet ekraninda araba fotografi gosterme: webcam acikken tableti kameraya tutmak yeterlidir (ayri mod yok).
+
+Ornek kontrol:
+- kutular plaka ustune oturuyor mu?
+- cok fazla false positive var mi?
+- uzak/acili goruntulerde davranis nasil?
+
+-------------------------------------------------------------------
+13) TEMEL METRIKLERI YORUMLAMA
+-------------------------------------------------------------------
+Ilk egitimde bakilacaklar:
+- mAP50
+- precision
+- recall
+
+Ilk denemede hedef:
+- calisan bir baseline olusturmak
+- metriklerin mukemmel olmasi zorunlu degil
+
+Eger recall dusukse:
+- daha cesitli veri,
+- daha fazla epoch,
+- augmentasyon,
+- daha iyi etiket temizligi denenir.
+
+-------------------------------------------------------------------
+14) KALITE KONTROL CHECKLIST
+-------------------------------------------------------------------
+[ ] train/val/test klasorleri olustu
+[ ] image-label sayilari tutuyor
+[ ] dataset.yaml dogru path'e isaret ediyor
+[ ] egitim basladi ve hata vermedi
+[ ] best.pt olustu
+[ ] ornek inference goruntusu uretildi
+[ ] en az 20 test gorseli gozle kontrol edildi
+
+-------------------------------------------------------------------
+15) SIK HATALAR VE COZUMLER
+-------------------------------------------------------------------
+Hata 1: "No labels found"
+Cozum:
+- parse scripti dogru label uretmis mi kontrol et.
+- image ve label dosya isimleri ayni mi kontrol et.
+
+Hata 2: "Dataset not found" / yaml path hatasi
+Cozum:
+- dataset.yaml icindeki path'i mutlak yol yap.
+- klasor adlarinda yazim hatasi var mi kontrol et.
+
+Hata 3: OOM / bellek yetersiz
+Cozum:
+- batch dusur (16 -> 8 -> 4)
+- imgsz dusur (640 -> 512)
+
+Hata 4: Model hic kutu bulmuyor
+Cozum:
+- bbox parse mantigi yanlis olabilir.
+- label koordinatlarini ornek 10 dosyada manuel kontrol et.
+
+-------------------------------------------------------------------
+16) BU DOKUMAN SONUNDA OLMASI GEREKEN DOSYALAR
+-------------------------------------------------------------------
+Zorunlu:
+- scripts/01_prepare_ccpd_sample.py
+- scripts/02_convert_ccpd_to_yolo.py
+- scripts/03_split_dataset.py
+- scripts/04_train_yolo.py
+- scripts/05_inference_test.py
+- scripts/06_camera_predict.py (kamera / dis dosya testi)
+- weights_utils.py (kok klasor, best.pt yolunu bulma)
+- data/processed/yolo_plate_dataset/dataset.yaml
+- outputs/runs/plate_det_v1 veya runs/detect/... altinda egitim ciktilari (best.pt)
+
+Opsiyonel:
+- outputs/logs/dataset_prepare.log
+- outputs/logs/train_v1.log
+
+-------------------------------------------------------------------
+17) SONRAKI DOKUMAN
+-------------------------------------------------------------------
+Dokuman-03 kapsam:
+- OCR katmani (EasyOCR baseline + alternatif OCR stratejisi)
+- OCR post-processing (tekrar ayiklama, karakter duzeltme)
+- cok ulke plaka format dogrulama tasarimi
+- detection + OCR birlesik pipeline
+
+Dokuman-02 Sonu
+
+-------------------------------------------------------------------
+18) COK ULKE VERI GENISLETME PLANI
+-------------------------------------------------------------------
+Bu dokuman CCPD ile baseline baslatir; ancak hedef cok ulke oldugu icin
+asagidaki veri karmasi zorunlu olarak planlanmistir:
+
+Asama-A (Baseline):
+- CCPD sample -> detection pipeline dogrulama
+
+Asama-B (Genisleme):
+- Avrupa odakli ek veri (en az DE/FR/IT/NL)
+- TR ornekleri ile dengeleme
+
+Asama-C (Karma Egitim):
+- train sette ulke dengesi gozetecek sampling
+- test sette ulke bazli metrik raporu
+
+Basari kural:
+- Sadece toplam mAP degil, ulke-bazli mAP raporu da zorunlu.

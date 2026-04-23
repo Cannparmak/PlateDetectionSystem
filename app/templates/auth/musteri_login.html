@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Müşteri Girişi | CanPark</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary":"#adc6ff","surface-container":"#1e1f26","surface-container-low":"#191b22","on-surface":"#e2e2eb","outline-variant":"#424754","error":"#ffb4ab"}}}}</script>
+  <style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}.ghost-border{border:1px solid rgba(66,71,84,0.15);}.glow-active{box-shadow:0 0 20px rgba(77,142,255,0.30);}</style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-primary tracking-tighter">CanPark</h1>
+      <p class="text-[#8c909f] text-sm mt-1">Müşteri Portalı</p>
+    </div>
+    <div class="bg-[#1e1f26] rounded-3xl p-8 ghost-border">
+      {% if error %}
+      <div class="mb-5 p-4 bg-[#93000a]/20 rounded-2xl text-[#ffb4ab] text-sm flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">error</span>{{ error }}
+      </div>
+      {% endif %}
+      <form method="post" action="/musteri/login" class="space-y-5">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">E-posta</label>
+          <input type="email" name="email" required class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none" placeholder="ahmet@email.com"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Şifre</label>
+          <input type="password" name="password" required class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none" placeholder="••••••••"/>
+        </div>
+        <button type="submit" class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all glow-active">Giriş Yap</button>
+      </form>
+    </div>
+    <p class="text-center text-[#8c909f] text-sm mt-6">
+      Hesabınız yok mu? <a href="/musteri/register" class="text-primary hover:underline">Kayıt olun</a>
+      &nbsp;·&nbsp;
+      <a href="/login" class="text-[#8c909f] hover:underline">Staff girişi</a>
+    </p>
+  </div>
+</body>
+</html>

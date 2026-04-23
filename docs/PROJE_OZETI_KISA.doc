@@ -1,0 +1,32 @@
+PLAKA TANIMA OTOPARK SISTEMI
+Kisa Proje Ozeti
+Surum: v1.0
+
+Bu proje, abonelik tabanli calisan akilli bir otopark gecis sistemidir.
+Sistem; kamera veya ekran goruntusunden arac plakasini tespit eder, OCR ile
+plaka metnini okur, metni temizleyip dogrular ve veritabaninda sorgular.
+
+Temel is kurali:
+Abonelik kisiye degil araca baglidir. Bir kullanici birden fazla arac
+ekleyebilir ve her arac icin ayri abonelik satin alabilir.
+
+Gecis karari:
+- Arac kayitli ve abonelik aktifse sonuc 1 (yetkili)
+- Degilse sonuc 0 (yetkisiz)
+
+Bu cikti ilk asamada LED simulasyonu ile gosterilir:
+- Yesil LED: yetkili gecis
+- Kirmizi LED: yetkisiz gecis
+
+Proje sadece Turk plakalariyla sinirli degildir. Hedef, Avrupa dahil farkli
+ulke plaka formatlarini da yuksek dogrulukla taniyip okuyabilmektir.
+
+Teknik omurga:
+- Detection: YOLO
+- OCR: EasyOCR + post-processing
+- Web yonetim: kullanici, arac, abonelik, fake odeme, admin paneli
+- Veritabani: MySQL
+
+Dokuman-odakli gelistirme modeli kullanilir:
+Once belgeler netlestirilir, sonra kodlama bu yol haritasina gore adim adim
+uygulanir.

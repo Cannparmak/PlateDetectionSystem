@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Ödeme{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="/subscriptions" class="text-[#8c909f] hover:text-white transition-colors">
+    <span class="material-symbols-outlined text-xl">arrow_back</span>
+  </a>
+  <h1 class="text-2xl font-bold text-white">Ödeme</h1>
+</div>
+<p class="text-[#8c909f] text-sm ml-9">Abonelik aktivasyonu için ödeme bilgilerini girin</p>
+
+<div class="grid grid-cols-12 gap-6 max-w-5xl" x-data="cardForm()">
+
+  <!-- Order Summary -->
+  <div class="col-span-5">
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5 sticky top-24">
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Sipariş Özeti</h3>
+
+      <!-- Vehicle -->
+      <div class="flex items-center gap-3 p-4 bg-[#0c0e14] rounded-2xl">
+        <div class="w-10 h-10 rounded-xl bg-primary-container/10 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary">directions_car</span>
+        </div>
+        <div>
+          <p class="font-mono font-bold text-white plate-font">{{ subscription.vehicle.plate_display if subscription.vehicle else '—' }}</p>
+          <p class="text-xs text-[#8c909f]">{{ subscription.vehicle.customer.full_name if subscription.vehicle and subscription.vehicle.customer else '—' }}</p>
+        </div>
+      </div>
+
+      <!-- Plan -->
+      <div class="p-4 bg-[#0c0e14] rounded-2xl">
+        <div class="flex justify-between items-start mb-2">
+          <p class="text-sm font-semibold text-white">{{ subscription.plan.name if subscription.plan else '—' }}</p>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#33343b] text-[#8c909f]">
+            {{ (subscription.plan.duration_hours / 24) | int if subscription.plan else '—' }} GÜN
+          </span>
+        </div>
+        <p class="text-xs text-[#8c909f]">
+          {{ subscription.start_date.strftime('%d.%m.%Y') }} –
+          {{ subscription.end_date.strftime('%d.%m.%Y') }}
+        </p>
+      </div>
+
+      <!-- Total -->
+      <div class="pt-4 border-t border-outline-variant/10">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-[#8c909f]">Toplam</span>
+          <span class="text-2xl font-bold text-white">{{ subscription.total_paid | int }} ₺</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Form -->
+  <div class="col-span-7">
+    <!-- 3D Card preview -->
+    <div class="relative h-44 mb-6 select-none payment-card" style="perspective: 1200px">
+      <!-- Flipper — rotates as a whole, front+back move together -->
+      <div class="relative w-full h-full transition-transform duration-500"
+           :style="flipped ? 'transform: rotateY(180deg)' : 'transform: rotateY(0deg)'"
+           style="transform-style: preserve-3d;">
+
+        <!-- FRONT -->
+        <div class="absolute inset-0 rounded-3xl p-6"
+             style="background: linear-gradient(135deg, #1a2a4a 0%, #0d1b35 50%, #1c2a45 100%);
+                    backface-visibility: hidden; -webkit-backface-visibility: hidden;">
+          <div class="flex justify-between items-start mb-5">
+            <div class="font-bold text-lg tracking-widest" style="color:#adc6ff">CanPark</div>
+            <span class="material-symbols-outlined text-2xl" style="color:#adc6ff; font-variation-settings:'FILL' 1;">credit_card</span>
+          </div>
+          <div class="font-mono text-lg tracking-[0.25em] mb-4" style="color:#e2e2eb">
+            <span x-text="formatCardNumber(cardNumber) || '•••• •••• •••• ••••'"></span>
+          </div>
+          <div class="flex justify-between">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider" style="color:#8c909f">Kart Sahibi</p>
+              <p class="text-sm font-medium mt-0.5" style="color:#e2e2eb" x-text="cardName || 'AD SOYAD'"></p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] uppercase tracking-wider" style="color:#8c909f">Son Kullanma</p>
+              <p class="text-sm font-medium mt-0.5" style="color:#e2e2eb" x-text="cardExpiry || 'AA/YY'"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- BACK — pre-rotated 180deg so it starts hidden -->
+        <div class="absolute inset-0 rounded-3xl p-6"
+             style="background: linear-gradient(135deg, #0d1b35 0%, #1a2a4a 100%);
+                    transform: rotateY(180deg);
+                    backface-visibility: hidden; -webkit-backface-visibility: hidden;">
+          <div class="w-full h-10 mt-3 mb-5 rounded" style="background:rgba(0,0,0,0.45)"></div>
+          <div class="flex items-center justify-end gap-2">
+            <div class="flex-1 h-8 rounded" style="background:rgba(0,0,0,0.30)"></div>
+            <div class="rounded px-4 py-1.5 font-mono text-sm" style="background:rgba(255,255,255,0.12); color:#e2e2eb"
+                 x-text="cardCvv || '•••'"></div>
+          </div>
+          <p class="text-[10px] text-right mt-2" style="color:#8c909f">CVV</p>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="/payment/{{ subscription.id }}/confirm" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Kart Numarası</label>
+        <input type="text" name="card_number" required maxlength="19"
+               x-model="cardNumber"
+               @input="cardNumber = formatInput($event.target.value)"
+               placeholder="0000 0000 0000 0000"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono tracking-widest"/>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Kart Üzerindeki İsim</label>
+        <input type="text" name="card_name" required
+               x-model="cardName"
+               placeholder="Ahmet Yılmaz"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 uppercase"
+               oninput="this.value = this.value.toUpperCase()"/>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Son Kullanma Tarihi</label>
+          <input type="text" name="card_expiry" required maxlength="5"
+                 x-model="cardExpiry"
+                 @input="cardExpiry = formatExpiry($event.target.value)"
+                 placeholder="AA/YY"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">CVV</label>
+          <input type="text" name="card_cvv" required maxlength="4"
+                 x-model="cardCvv"
+                 @focus="flipped = true"
+                 @blur="flipped = false"
+                 placeholder="•••"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono tracking-widest"/>
+        </div>
+      </div>
+
+      <div class="pt-2 p-4 bg-[#f59e0b]/5 rounded-2xl text-[#f59e0b] text-xs flex items-start gap-2">
+        <span class="material-symbols-outlined text-sm shrink-0 mt-0.5">info</span>
+        Bu simüle edilmiş bir ödeme ekranıdır. Gerçek kart bilgisi işlenmez.
+      </div>
+
+      <button type="submit"
+              class="w-full h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-lg" style="font-variation-settings:'FILL' 1;">lock</span>
+        {{ subscription.total_paid | int }} ₺ Öde
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function cardForm() {
+  return {
+    cardNumber: '',
+    cardName: '',
+    cardExpiry: '',
+    cardCvv: '',
+    flipped: false,
+    formatInput(val) {
+      val = val.replace(/\D/g, '').slice(0, 16);
+      return val.match(/.{1,4}/g)?.join(' ') || '';
+    },
+    formatCardNumber(val) {
+      if (!val) return '';
+      return val;
+    },
+    formatExpiry(val) {
+      val = val.replace(/\D/g, '').slice(0, 4);
+      if (val.length >= 3) return val.slice(0, 2) + '/' + val.slice(2);
+      return val;
+    }
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Abonelik Planları{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Abonelik Planları</h1>
+    <p class="text-[#8c909f] text-sm mt-1">Mevcut abonelik paketleri</p>
+  </div>
+  <a href="/subscriptions/new"
+     class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+    <span class="material-symbols-outlined text-xl">add_card</span>
+    Abonelik Sat
+  </a>
+</div>
+
+<!-- Plan Cards -->
+<div class="grid grid-cols-3 gap-6">
+  {% for plan in plans %}
+  <div class="bg-surface-container rounded-3xl p-6 ghost-border hover:bg-surface-container-high hover:signature-glow transition-all">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="w-12 h-12 rounded-2xl bg-primary-container/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1;">card_membership</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-white">{{ plan.name }}</h3>
+        <p class="text-xs text-[#8c909f]">{{ (plan.duration_hours / 24) | int }} gün</p>
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <span class="text-4xl font-bold text-white">{{ plan.price | int }}</span>
+      <span class="text-lg text-[#8c909f]"> ₺</span>
+    </div>
+
+    {% if plan.description %}
+    <p class="text-sm text-[#8c909f] mb-5 leading-relaxed">{{ plan.description }}</p>
+    {% endif %}
+
+    <a href="/subscriptions/new"
+       class="w-full h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-all">
+      Bu Planı Sat
+    </a>
+  </div>
+  {% else %}
+  <div class="col-span-3 bg-surface-container-low rounded-3xl p-16 ghost-border text-center">
+    <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">card_membership</span>
+    <p class="text-[#8c909f]">Henüz plan tanımlanmamış.</p>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

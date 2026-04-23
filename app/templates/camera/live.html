@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}Camera{% endblock %}
+
+{% block content %}
+<div x-data="dualCamera()" x-init="init()">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('cam_title')">Canlı Kamera</h1>
+      <p style="color:var(--text-subtle)" class="text-sm mt-1">Giriş ve çıkış kameraları bağımsız çalışır</p>
+    </div>
+    <!-- Occupancy pill -->
+    <div class="flex items-center gap-3 px-5 py-2.5 rounded-2xl ghost-border" style="background:var(--bg-card)">
+      <div class="relative w-12 h-12">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15" fill="none" stroke="var(--bg-chip)" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" stroke-width="3"
+                  stroke-linecap="round"
+                  :stroke-dasharray="'94.2'"
+                  :stroke-dashoffset="94.2 - (94.2 * occupancyPct / 100)"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-xs font-bold" style="color:var(--accent)" x-text="occupancyPct + '%'"></span>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">Doluluk</p>
+        <p class="text-sm font-bold" style="color:var(--text-primary)">
+          <span x-text="occupancyActive"></span> / <span x-text="occupancyCapacity"></span> araç
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dual Camera Grid ─────────────────────────────────────── -->
+  <div class="grid grid-cols-2 gap-6">
+
+    <!-- ════ ENTRY CAMERA ════ -->
+    <div class="flex flex-col gap-3">
+      <!-- Label -->
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-tertiary-container success-glow animate-pulse"></div>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-tertiary">GİRİŞ KAMERASI</h2>
+        <span class="text-xs ml-auto" style="color:var(--text-subtle)">Entry Gate</span>
+      </div>
+
+      <!-- Feed -->
+      <div class="relative rounded-2xl overflow-hidden ghost-border" style="aspect-ratio:16/9; background:var(--bg-deep)">
+        <video id="entry-video" autoplay muted playsinline class="hidden"></video>
+        <canvas id="entry-canvas" class="hidden"></canvas>
+        <img id="entry-img" class="absolute inset-0 w-full h-full object-cover" style="display:none" alt="Entry"/>
+
+        <!-- Placeholder -->
+        <div id="entry-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <span class="material-symbols-outlined text-5xl" style="color:var(--bg-chip)">videocam_off</span>
+          <p class="text-sm" style="color:var(--text-subtle)">Giriş kamerasını başlatın</p>
+          <button @click="startCamera('entry')"
+                  class="px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
+                  style="background:var(--accent);color:var(--accent-on)">
+            <span class="material-symbols-outlined text-base">videocam</span>
+            Başlat
+          </button>
+        </div>
+
+        <!-- Badges -->
+        <div x-show="entry.active" class="absolute top-3 left-3 flex items-center gap-1.5 bg-tertiary-container/90 px-2.5 py-1 rounded-full z-10">
+          <div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+          <span class="text-[10px] font-bold text-white">LIVE · GİRİŞ</span>
+        </div>
+        <div x-show="entry.active" class="absolute top-3 right-3 bg-black/60 px-2.5 py-1 rounded-full z-10">
+          <span class="text-[10px] font-mono text-white" x-text="entry.fps + 'fps · ' + entry.ms + 'ms'"></span>
+        </div>
+
+        <!-- Plate overlay -->
+        <template x-if="entry.detection">
+          <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm px-5 py-1.5 rounded-full z-10 ghost-border">
+            <span class="plate-font text-white font-bold text-lg" x-text="entry.detection.plate_text"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Detection info -->
+      <div class="rounded-2xl p-4 ghost-border flex items-center gap-4" style="background:var(--bg-card)">
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--text-subtle)">Tespit Edilen Plaka</p>
+          <p class="plate-font font-bold text-xl" style="color:var(--text-primary)"
+             x-text="entry.detection ? entry.detection.plate_text : '— — —'"></p>
+          <p class="text-xs mt-0.5" style="color:var(--text-muted)"
+             x-text="entry.detection ? (entry.detection.customer_name || 'Bilinmiyor') : ''"></p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                :class="entry.detection?.subscription_status === 'ACTIVE'
+                  ? 'bg-tertiary-container/20 text-tertiary'
+                  : 'bg-error-container/20 text-error'"
+                x-text="entry.detection ? entry.detection.subscription_status || 'NO SUB' : '—'"></span>
+          <template x-if="entry.result">
+            <span class="text-xs font-semibold"
+                  :class="entry.result.success ? 'text-tertiary' : 'text-error'"
+                  x-text="entry.result.message"></span>
+          </template>
+        </div>
+      </div>
+
+      <!-- Entry button -->
+      <button @click="manualEntry()"
+              :disabled="!entry.active || entry.processing"
+              class="h-14 rounded-2xl font-bold flex items-center justify-center gap-3 text-base
+                     hover:brightness-110 active:scale-95 transition-all success-glow
+                     disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+              style="background-color: rgba(0,165,114,0.20); color:#4edea3; border:1px solid rgba(0,165,114,0.3)">
+        <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1;">login</span>
+        <span x-text="entry.processing ? 'İşleniyor...' : $store.app.t('cam_entry') + ' — MANUAL ENTRY'"></span>
+      </button>
+    </div>
+
+    <!-- ════ EXIT CAMERA ════ -->
+    <div class="flex flex-col gap-3">
+      <!-- Label -->
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-error animate-pulse" style="box-shadow:0 0 8px rgba(255,0,0,0.5)"></div>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-error">ÇIKIŞ KAMERASI</h2>
+        <span class="text-xs ml-auto" style="color:var(--text-subtle)">Exit Gate</span>
+      </div>
+
+      <!-- Feed -->
+      <div class="relative rounded-2xl overflow-hidden ghost-border" style="aspect-ratio:16/9; background:var(--bg-deep)">
+        <video id="exit-video" autoplay muted playsinline class="hidden"></video>
+        <canvas id="exit-canvas" class="hidden"></canvas>
+        <img id="exit-img" class="absolute inset-0 w-full h-full object-cover" style="display:none" alt="Exit"/>
+
+        <!-- Placeholder -->
+        <div id="exit-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <span class="material-symbols-outlined text-5xl" style="color:var(--bg-chip)">videocam_off</span>
+          <p class="text-sm" style="color:var(--text-subtle)">Çıkış kamerasını başlatın</p>
+          <button @click="startCamera('exit')"
+                  class="px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
+                  style="background:var(--accent);color:var(--accent-on)">
+            <span class="material-symbols-outlined text-base">videocam</span>
+            Başlat
+          </button>
+        </div>
+
+        <!-- Badges -->
+        <div x-show="exitCam.active" class="absolute top-3 left-3 flex items-center gap-1.5 bg-error/80 px-2.5 py-1 rounded-full z-10">
+          <div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+          <span class="text-[10px] font-bold text-white">LIVE · ÇIKIŞ</span>
+        </div>
+        <div x-show="exitCam.active" class="absolute top-3 right-3 bg-black/60 px-2.5 py-1 rounded-full z-10">
+          <span class="text-[10px] font-mono text-white" x-text="exitCam.fps + 'fps · ' + exitCam.ms + 'ms'"></span>
+        </div>
+
+        <!-- Plate overlay -->
+        <template x-if="exitCam.detection">
+          <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm px-5 py-1.5 rounded-full z-10 ghost-border">
+            <span class="plate-font text-white font-bold text-lg" x-text="exitCam.detection.plate_text"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Detection info -->
+      <div class="rounded-2xl p-4 ghost-border flex items-center gap-4" style="background:var(--bg-card)">
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--text-subtle)">Tespit Edilen Plaka</p>
+          <p class="plate-font font-bold text-xl" style="color:var(--text-primary)"
+             x-text="exitCam.detection ? exitCam.detection.plate_text : '— — —'"></p>
+          <p class="text-xs mt-0.5" style="color:var(--text-muted)"
+             x-text="exitCam.detection ? (exitCam.detection.customer_name || 'Bilinmiyor') : ''"></p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                :class="exitCam.detection?.subscription_status === 'ACTIVE'
+                  ? 'bg-tertiary-container/20 text-tertiary'
+                  : 'bg-error-container/20 text-error'"
+                x-text="exitCam.detection ? exitCam.detection.subscription_status || 'NO SUB' : '—'"></span>
+          <template x-if="exitCam.result">
+            <span class="text-xs font-semibold"
+                  :class="exitCam.result.success ? 'text-tertiary' : 'text-error'"
+                  x-text="exitCam.result.message"></span>
+          </template>
+        </div>
+      </div>
+
+      <!-- Exit button -->
+      <button @click="manualExit()"
+              :disabled="!exitCam.active || exitCam.processing"
+              class="h-14 rounded-2xl font-bold flex items-center justify-center gap-3 text-base
+                     hover:brightness-110 active:scale-95 transition-all error-glow
+                     disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+              style="background-color:rgba(147,0,10,0.20); color:#ffb4ab; border:1px solid rgba(147,0,10,0.3)">
+        <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1;">logout</span>
+        <span x-text="exitCam.processing ? 'İşleniyor...' : $store.app.t('cam_exit') + ' — MANUAL EXIT'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Camera device selector ───────────────────────────────── -->
+  <div x-show="availableCameras.length > 1"
+       class="mt-4 p-4 rounded-2xl ghost-border flex items-center gap-6 flex-wrap"
+       style="background:var(--bg-card)">
+    <span class="material-symbols-outlined" style="color:var(--accent)">settings_input_component</span>
+    <div class="flex items-center gap-3">
+      <label class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Giriş Kamerası</label>
+      <select x-model="entry.deviceId" @change="restartCamera('entry')"
+              class="rounded-xl px-3 py-1.5 text-sm ghost-border" style="background:var(--bg-deep);color:var(--text-primary)">
+        <template x-for="cam in availableCameras" :key="cam.deviceId">
+          <option :value="cam.deviceId" x-text="cam.label || 'Kamera ' + cam.deviceId.slice(0,6)"></option>
+        </template>
+      </select>
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Çıkış Kamerası</label>
+      <select x-model="exitCam.deviceId" @change="restartCamera('exit')"
+              class="rounded-xl px-3 py-1.5 text-sm ghost-border" style="background:var(--bg-deep);color:var(--text-primary)">
+        <template x-for="cam in availableCameras" :key="cam.deviceId">
+          <option :value="cam.deviceId" x-text="cam.label || 'Kamera ' + cam.deviceId.slice(0,6)"></option>
+        </template>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Recent Activity ──────────────────────────────────────── -->
+  <div class="mt-6">
+    <div class="flex justify-between items-center mb-4">
+      <h4 class="text-base font-bold" style="color:var(--text-primary)">Recent Activity</h4>
+      <a href="/sessions" class="text-xs font-bold hover:underline" style="color:var(--accent)">View All</a>
+    </div>
+    <div class="rounded-3xl overflow-hidden ghost-border" style="background:var(--bg-sidebar)">
+      <div class="grid grid-cols-5 px-6 py-3 text-[10px] font-bold uppercase tracking-widest" style="background:var(--bg-deep);color:var(--text-subtle)">
+        <div>Plaka</div><div>Tip</div><div>Kaynak</div><div>Saat</div><div class="text-right">Durum</div>
+      </div>
+      <div class="divide-y" style="border-color:rgba(66,71,84,0.1)">
+        <template x-for="item in activityFeed" :key="item.id">
+          <div class="grid grid-cols-5 px-6 py-3 items-center hover:opacity-80 transition-opacity">
+            <div class="plate-font font-bold text-sm" style="color:var(--text-primary)" x-text="item.plate"></div>
+            <div class="text-sm" style="color:var(--text-muted)" x-text="item.type"></div>
+            <div class="text-xs" style="color:var(--text-subtle)" x-text="item.gate"></div>
+            <div class="text-sm" style="color:var(--text-muted)" x-text="item.time"></div>
+            <div class="text-right">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                    :class="item.action === 'ENTERED' ? 'bg-tertiary-container/20 text-tertiary' : 'bg-error-container/20 text-error'"
+                    x-text="item.action"></span>
+            </div>
+          </div>
+        </template>
+        <template x-if="activityFeed.length === 0">
+          <div class="px-6 py-8 text-center text-sm" style="color:var(--text-subtle)">Henüz kayıt yok.</div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function dualCamera() {
+  return {
+    availableCameras: [],
+    occupancyPct: 0,
+    occupancyActive: 0,
+    occupancyCapacity: 100,
+    activityFeed: [],
+
+    entry: {
+      active: false, processing: false,
+      ws: null, stream: null, interval: null,
+      detection: null, result: null,
+      fps: 0, ms: 0, deviceId: ''
+    },
+    exitCam: {
+      active: false, processing: false,
+      ws: null, stream: null, interval: null,
+      detection: null, result: null,
+      fps: 0, ms: 0, deviceId: ''
+    },
+
+    init() {
+      this.enumerateCameras();
+      this.connectWS('entry');
+      this.connectWS('exit');
+      this.fetchOccupancy();
+      setInterval(() => this.fetchOccupancy(), 10000);
+    },
+
+    async enumerateCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        this.availableCameras = devices.filter(d => d.kind === 'videoinput');
+      } catch (_) {}
+    },
+
+    panel(side) { return side === 'entry' ? this.entry : this.exitCam; },
+
+    connectWS(side) {
+      const p = this.panel(side);
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      p.ws = new WebSocket(`${proto}://${location.host}/ws/stream`);
+      p.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type !== 'result') return;
+        const img = document.getElementById(`${side}-img`);
+        if (data.annotated_frame) {
+          img.src = 'data:image/jpeg;base64,' + data.annotated_frame;
+          img.style.display = 'block';
+        }
+        p.fps = data.fps || 0;
+        p.ms  = data.processing_ms || 0;
+        if (data.detections && data.detections.length > 0) {
+          p.detection = data.detections.reduce((a, b) => a.confidence_det > b.confidence_det ? a : b);
+        } else {
+          p.detection = null;
+        }
+      };
+      p.ws.onclose = () => {
+        setTimeout(() => { if (p.active) this.connectWS(side); }, 2000);
+      };
+    },
+
+    async startCamera(side) {
+      const p = this.panel(side);
+      try {
+        const constraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
+        if (p.deviceId) constraints.video.deviceId = { exact: p.deviceId };
+        p.stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        const video = document.getElementById(`${side}-video`);
+        video.srcObject = p.stream;
+        await video.play();
+
+        document.getElementById(`${side}-placeholder`).style.display = 'none';
+        p.active = true;
+
+        if (!this.availableCameras.length) this.enumerateCameras();
+
+        const canvas = document.getElementById(`${side}-canvas`);
+        const ctx = canvas.getContext('2d');
+        canvas.width = 640; canvas.height = 360;
+
+        p.interval = setInterval(() => {
+          if (p.ws?.readyState !== WebSocket.OPEN) return;
+          ctx.drawImage(video, 0, 0, 640, 360);
+          const frame = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+          p.ws.send(JSON.stringify({ action: 'stream', frame }));
+        }, 150);
+
+      } catch (err) {
+        alert(`${side === 'entry' ? 'Giriş' : 'Çıkış'} kamerası açılamadı: ` + err.message);
+      }
+    },
+
+    restartCamera(side) {
+      const p = this.panel(side);
+      if (p.stream) {
+        p.stream.getTracks().forEach(t => t.stop());
+        clearInterval(p.interval);
+        p.active = false;
+        document.getElementById(`${side}-placeholder`).style.display = 'flex';
+        document.getElementById(`${side}-img`).style.display = 'none';
+      }
+      this.startCamera(side);
+    },
+
+    captureFrame(side) {
+      const video  = document.getElementById(`${side}-video`);
+      const canvas = document.getElementById(`${side}-canvas`);
+      const ctx = canvas.getContext('2d');
+      canvas.width = 640; canvas.height = 360;
+      ctx.drawImage(video, 0, 0, 640, 360);
+      return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+    },
+
+    async manualEntry() {
+      const p = this.entry;
+      if (p.processing) return;
+      p.processing = true;
+      try {
+        const frame = this.captureFrame('entry');
+        const res = await fetch('/api/camera/entry', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ frame }),
+        });
+        const data = await res.json();
+        p.result = data;
+        if (data.success) {
+          this.addActivity(data.plate_text, 'Subscriber', 'GİRİŞ', 'ENTERED');
+          this.fetchOccupancy();
+        }
+      } catch (e) {
+        p.result = { success: false, message: 'Bağlantı hatası.' };
+      } finally {
+        p.processing = false;
+      }
+    },
+
+    async manualExit() {
+      const p = this.exitCam;
+      if (p.processing) return;
+      p.processing = true;
+      try {
+        const frame = this.captureFrame('exit');
+        const res = await fetch('/api/camera/exit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ frame }),
+        });
+        const data = await res.json();
+        p.result = data;
+        if (data.success) {
+          this.addActivity(data.plate_text, 'Subscriber', 'ÇIKIŞ', 'EXITED');
+          this.fetchOccupancy();
+        }
+      } catch (e) {
+        p.result = { success: false, message: 'Bağlantı hatası.' };
+      } finally {
+        p.processing = false;
+      }
+    },
+
+    async fetchOccupancy() {
+      try {
+        const res = await fetch('/api/sessions/occupancy');
+        const data = await res.json();
+        this.occupancyActive   = data.active;
+        this.occupancyCapacity = data.capacity;
+        this.occupancyPct      = data.occupancy_pct;
+      } catch (_) {}
+    },
+
+    addActivity(plate, type, gate, action) {
+      const time = new Date().toTimeString().slice(0, 8);
+      this.activityFeed.unshift({ id: Date.now(), plate, type, gate, action, time });
+      if (this.activityFeed.length > 15) this.activityFeed.pop();
+    },
+  };
+}
+</script>
+{% endblock %}
