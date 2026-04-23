@@ -112,9 +112,7 @@ GATE_ENABLED=true
 GATE_PORT=COM3   # Aygıt Yöneticisi'nden doğru COM portunu yaz
 ```
 
-## Katkıda Bulunma
-
-Bu proje bir bitirme çalışmasıdır. Pull request ve issue açmaktan çekinme.
+Bu proje bir bitirme çalışmasıdır.
 
 ## Lisans
 
