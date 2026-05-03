@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plaka Sorgulama | CanPark</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = { darkMode:"class", theme:{ extend:{ colors:{
+      "primary":"#adc6ff","primary-container":"#4d8eff","surface":"#111319",
+      "surface-container":"#1e1f26","surface-container-low":"#191b22",
+      "surface-container-high":"#282a30","surface-container-highest":"#33343b",
+      "surface-container-lowest":"#0c0e14","on-surface":"#e2e2eb",
+      "on-surface-variant":"#c2c6d6","outline-variant":"#424754","outline":"#8c909f",
+      "tertiary":"#4edea3","tertiary-container":"#00a572","error":"#ffb4ab",
+      "error-container":"#93000a","on-error-container":"#ffdad6",
+    }}}}
+  </script>
+  <style>
+    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+    body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}
+    html:not(.dark) body{background-color:#f4f6fb;color:#1a1c23;}
+    html:not(.dark) .bg-\[#1e1f26\]{background-color:#e8eaf4!important;}
+    html:not(.dark) .bg-\[#191b22\]{background-color:#eef0f8!important;}
+    html:not(.dark) .bg-\[#0c0e14\]{background-color:#dde0ee!important;}
+    html:not(.dark) .text-\[#8c909f\]{color:#6b6f82!important;}
+    html:not(.dark) .text-\[#e2e2eb\]{color:#1a1c23!important;}
+    html:not(.dark) .text-\[#c2c6d6\]{color:#3a3d52!important;}
+    .ghost-border{border:1px solid rgba(66,71,84,0.15);}
+    .plate-font{font-family:'Courier New',monospace;letter-spacing:0.12em;}
+    input:focus{outline:none;border-color:rgba(77,142,255,0.5)!important;box-shadow:0 0 0 4px rgba(77,142,255,0.1);}
+    *,*::before,*::after{transition:background-color 0.2s ease,color 0.15s ease;}
+    .material-symbols-outlined{transition:none!important;}
+  </style>
+  <script src="/static/js/app.js"></script>
+</head>
+<body class="min-h-screen" x-data x-init="$store.app.init()">
+
+  <!-- Top bar -->
+  <header class="bg-[#191b22] h-14 flex items-center justify-between px-6 ghost-border sticky top-0 z-40">
+    <a href="/" class="text-lg font-bold text-[#adc6ff] tracking-tighter">CanPark</a>
+    <div class="flex items-center gap-2">
+      <button @click="$store.app.toggleTheme()"
+              class="w-8 h-8 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+        <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-xl mx-auto px-4 py-10 space-y-6">
+
+    <!-- Title -->
+    <div class="text-center">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1e1f26] ghost-border mb-4">
+        <span class="material-symbols-outlined text-3xl text-[#adc6ff]" style="font-variation-settings:'FILL' 1;">search</span>
+      </div>
+      <h1 class="text-2xl font-bold text-[#e2e2eb]">Plaka Sorgulama</h1>
+      <p class="text-sm text-[#8c909f] mt-1">Plakanızı girerek borç durumunuzu öğrenin</p>
+    </div>
+
+    <!-- Search form -->
+    <form method="get" action="/plaka-sorgula" class="space-y-3">
+      <div class="flex items-center bg-[#1e1f26] rounded-2xl ghost-border px-4 py-3 gap-3">
+        <span class="material-symbols-outlined text-[#8c909f]">local_parking</span>
+        <input type="text" name="plaka"
+               value="{{ query }}"
+               required
+               autocomplete="off"
+               class="flex-1 bg-transparent border-none focus:ring-0 text-[#e2e2eb] placeholder:text-[#8c909f] font-mono tracking-widest uppercase text-lg"
+               placeholder="34 ABC 1234"
+               style="letter-spacing:0.10em;"/>
+      </div>
+      <button type="submit"
+              class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl flex items-center justify-center gap-2
+                     hover:brightness-110 active:scale-95 transition-all">
+        <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">search</span>
+        Sorgula
+      </button>
+      <p class="text-center text-xs text-[#8c909f]">
+        Plakayı boşluklu <span class="plate-font font-semibold text-[#c2c6d6]">34 ABC 1234</span>
+        veya boşluksuz <span class="plate-font font-semibold text-[#c2c6d6]">34ABC1234</span> yazabilirsiniz.
+      </p>
+    </form>
+
+    <!-- ── RESULTS ─────────────────────────────────────────────── -->
+
+    {% if not_found %}
+    <div class="bg-[#1e1f26] rounded-2xl p-6 ghost-border text-center space-y-2">
+      <span class="material-symbols-outlined text-4xl text-[#8c909f]">no_crash</span>
+      <p class="font-semibold text-[#e2e2eb]">Plaka bulunamadı</p>
+      <p class="text-sm text-[#8c909f]">
+        <span class="plate-font font-bold text-[#adc6ff]">{{ query }}</span>
+        sistemde kayıtlı değil. Hiç borç kaydı yoktur.
+      </p>
+    </div>
+    {% endif %}
+
+    {% if vehicle is defined and vehicle %}
+
+    <!-- Fuzzy match notice -->
+    {% if fuzzy_match %}
+    <div class="flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-sm text-yellow-400">
+      <span class="material-symbols-outlined text-base">warning</span>
+      <span>Girilen plaka <strong>{{ fuzzy_original }}</strong> — en yakın eşleşme:
+        <strong class="plate-font">{{ plate_display }}</strong>
+      </span>
+    </div>
+    {% endif %}
+
+    <!-- Vehicle card -->
+    <div class="bg-[#1e1f26] rounded-2xl ghost-border overflow-hidden">
+      <!-- Plate header -->
+      <div class="px-6 py-5 flex items-center justify-between" style="background:#0c0e14">
+        <div class="flex items-center gap-4">
+          <div class="w-11 h-11 rounded-xl bg-[#1e1f26] ghost-border flex items-center justify-center">
+            <span class="material-symbols-outlined text-[#adc6ff]" style="font-variation-settings:'FILL' 1;">directions_car</span>
+          </div>
+          <div>
+            <p class="plate-font font-bold text-2xl text-[#e2e2eb]">{{ plate_display }}</p>
+            {% if vehicle.customer %}
+            <p class="text-xs text-[#8c909f] mt-0.5">{{ vehicle.customer.full_name }}</p>
+            {% else %}
+            <p class="text-xs text-[#8c909f] mt-0.5">Anonim araç</p>
+            {% endif %}
+          </div>
+        </div>
+        <!-- User type badge -->
+        {% if subscription %}
+        <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-tertiary-container/20 text-[#4edea3]">ABONE</span>
+        {% else %}
+        <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-yellow-500/15 text-yellow-400">MİSAFİR</span>
+        {% endif %}
+      </div>
+
+      <div class="divide-y" style="border-color:rgba(66,71,84,0.12)">
+
+        <!-- Active subscription block -->
+        {% if subscription %}
+        <div class="px-6 py-4 flex items-center gap-3">
+          <span class="material-symbols-outlined text-[#4edea3]" style="font-variation-settings:'FILL' 1;">verified</span>
+          <div>
+            <p class="text-sm font-semibold text-[#4edea3]">{{ subscription.plan.name if subscription.plan else 'Aktif Abonelik' }}</p>
+            <p class="text-xs text-[#8c909f]">{{ subscription.end_date.strftime('%d.%m.%Y') }}'e kadar geçerli · {{ subscription.days_remaining }} gün kaldı</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Currently inside block -->
+        {% if active_session %}
+        <div class="px-6 py-4">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-2 h-2 rounded-full bg-[#4edea3] animate-pulse" style="box-shadow:0 0 6px rgba(0,165,114,0.6)"></div>
+            <p class="text-sm font-bold text-[#4edea3]">ŞU AN OTOPARKTA</p>
+          </div>
+          <p class="text-xs text-[#8c909f]">
+            Giriş: {{ active_session.entry_time.strftime('%d.%m.%Y %H:%M') }}
+          </p>
+          {% if active_session.is_guest and estimated_fee is not none %}
+          <div class="mt-3 flex items-center justify-between bg-[#0c0e14] rounded-xl px-4 py-3">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-[#8c909f]">Tahmini Ücret</p>
+              {% set h = elapsed_minutes // 60 %}
+              {% set m = elapsed_minutes % 60 %}
+              <p class="text-xs text-[#8c909f] mt-0.5">
+                {% if h %}{{ h }} saat {{ m }} dk{% else %}{{ m }} dk{% endif %}
+              </p>
+            </div>
+            <p class="text-2xl font-bold text-[#adc6ff]">₺{{ "%.0f"|format(estimated_fee) }}</p>
+          </div>
+          <p class="text-[10px] text-[#8c909f] mt-2">
+            * Ücret çıkış anında kesinleşir. Abonelik sahibi araçlar ücretsiz çıkış yapar.
+          </p>
+          {% elif active_session.subscription_id %}
+          <p class="text-xs text-[#4edea3] mt-1">Abonelik kapsamında — ücretsiz çıkış yapabilirsiniz.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Total debt block -->
+        {% if total_debt > 0 %}
+        <div class="px-6 py-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[#ffb4ab]">receipt_long</span>
+              <p class="text-sm font-bold text-[#ffb4ab]">Ödenmemiş Borç</p>
+            </div>
+            <p class="text-2xl font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(total_debt) }}</p>
+          </div>
+
+          <!-- Unpaid sessions list -->
+          <div class="space-y-2">
+            {% for s in unpaid_sessions %}
+            <div class="flex items-center justify-between bg-[#0c0e14] rounded-xl px-4 py-2.5">
+              <div>
+                <p class="text-xs font-semibold text-[#e2e2eb]">
+                  {{ s.exit_time.strftime('%d.%m.%Y') if s.exit_time else '—' }}
+                </p>
+                <p class="text-[10px] text-[#8c909f]">
+                  {{ s.entry_time.strftime('%H:%M') }}
+                  →
+                  {{ s.exit_time.strftime('%H:%M') if s.exit_time else '?' }}
+                  {% if s.duration_minutes %}
+                    ·
+                    {% set h = s.duration_minutes // 60 %}
+                    {% set m = s.duration_minutes % 60 %}
+                    {% if h %}{{ h }}s {{ m }}dk{% else %}{{ m }}dk{% endif %}
+                  {% endif %}
+                </p>
+              </div>
+              <p class="text-sm font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(s.fee_amount) }}</p>
+            </div>
+            {% endfor %}
+          </div>
+
+          <a href="/plaka-sorgula/odeme/{{ vehicle.plate_number }}"
+             class="mt-3 w-full h-11 bg-[#4edea3] text-[#001f12] font-bold rounded-xl flex items-center justify-center gap-2
+                    hover:brightness-110 active:scale-95 transition-all text-sm">
+            <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">credit_card</span>
+            Online Öde — ₺{{ "%.0f"|format(total_debt) }}
+          </a>
+        </div>
+        {% elif not active_session and not subscription %}
+        <div class="px-6 py-4 text-center">
+          <span class="material-symbols-outlined text-3xl text-[#4edea3] mb-2 block" style="font-variation-settings:'FILL' 1;">check_circle</span>
+          <p class="text-sm font-semibold text-[#4edea3]">Ödenmemiş borç yok</p>
+          <p class="text-xs text-[#8c909f] mt-1">Bu araca ait tüm park ödemeleri tamamlanmış.</p>
+        </div>
+        {% elif subscription and total_debt == 0 and not active_session %}
+        <div class="px-6 py-4 text-center">
+          <span class="material-symbols-outlined text-3xl text-[#4edea3] mb-2 block" style="font-variation-settings:'FILL' 1;">check_circle</span>
+          <p class="text-sm font-semibold text-[#4edea3]">Borç yok</p>
+          <p class="text-xs text-[#8c909f] mt-1">Aktif aboneliğiniz sayesinde park ücreti ödemeniz gerekmiyor.</p>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Nav links -->
+    <div class="flex flex-col items-center gap-2 text-sm text-[#8c909f]">
+      <a href="/" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">home</span>
+        Ana sayfaya dön
+      </a>
+      <a href="/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+        Admin / Personel girişi
+      </a>
+      <a href="/musteri/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">person</span>
+        Müşteri girişi
+      </a>
+    </div>
+
+  </main>
+</body>
+</html>

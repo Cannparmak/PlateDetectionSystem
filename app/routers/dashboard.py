@@ -21,36 +21,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 @router.get("/dashboard")
 async def dashboard_redirect(user: User = Depends(get_current_staff_user)):
-    if user.role == "admin":
-        return RedirectResponse("/admin", status_code=302)
-    return RedirectResponse("/dashboard/kasiyer", status_code=302)
-
-
-@router.get("/dashboard/kasiyer", response_class=HTMLResponse)
-async def kasiyer_dashboard(
-    request: Request,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_staff_user),
-):
-    from datetime import datetime
-    now = datetime.utcnow()
-    active_sessions = (
-        db.query(ParkingSession)
-        .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
-        .filter(ParkingSession.is_active == True)
-        .order_by(ParkingSession.entry_time.desc())
-        .all()
-    )
-    from app.models.parking_config import ParkingConfig
-    config = db.query(ParkingConfig).first()
-    capacity = config.total_capacity if config else 100
-
-    return templates.TemplateResponse(request, "dashboard/kasiyer.html", {
-        "user": user,
-        "active_sessions": active_sessions,
-        "active_count": len(active_sessions),
-        "capacity": capacity,
-    })
+    return RedirectResponse("/admin", status_code=302)
 
 
 @router.get("/musteri/dashboard", response_class=HTMLResponse)
@@ -59,14 +30,30 @@ async def musteri_dashboard(
     db: Session = Depends(get_db),
     customer: Customer = Depends(get_current_customer),
 ):
-    from datetime import datetime
     vehicles = (
         db.query(Vehicle)
         .options(joinedload(Vehicle.subscriptions).joinedload(Subscription.plan))
         .filter(Vehicle.customer_id == customer.id, Vehicle.is_active == True)
         .all()
     )
+
+    vehicle_debts: dict[int, float] = {}
+    for v in vehicles:
+        rows = (
+            db.query(ParkingSession.fee_amount)
+            .filter(
+                ParkingSession.vehicle_id == v.id,
+                ParkingSession.is_guest == True,
+                ParkingSession.is_paid == False,
+                ParkingSession.fee_amount.isnot(None),
+                ParkingSession.is_active == False,
+            )
+            .all()
+        )
+        vehicle_debts[v.id] = round(sum(r[0] for r in rows if r[0]), 2)
+
     return templates.TemplateResponse(request, "dashboard/musteri.html", {
         "customer": customer,
         "vehicles": vehicles,
+        "vehicle_debts": vehicle_debts,
     })

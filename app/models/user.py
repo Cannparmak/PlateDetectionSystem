@@ -19,9 +19,9 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(
-        Enum("admin", "kasiyer", name="user_role"),
+        Enum("admin", name="user_role"),
         nullable=False,
-        default="kasiyer",
+        default="admin",
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

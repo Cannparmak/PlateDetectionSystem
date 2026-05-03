@@ -33,11 +33,20 @@
         <button type="submit" class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all glow-active">Giriş Yap</button>
       </form>
     </div>
-    <p class="text-center text-[#8c909f] text-sm mt-6">
-      Hesabınız yok mu? <a href="/musteri/register" class="text-primary hover:underline">Kayıt olun</a>
-      &nbsp;·&nbsp;
-      <a href="/login" class="text-[#8c909f] hover:underline">Staff girişi</a>
-    </p>
+    <div class="mt-6 flex flex-col items-center gap-2 text-sm text-[#8c909f]">
+      <a href="/musteri/register" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">person_add</span>
+        Hesabınız yok mu? Kayıt olun
+      </a>
+      <a href="/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+        Admin / Personel girişi
+      </a>
+      <a href="/plaka-sorgula" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">search</span>
+        Plaka sorgula / borç öde
+      </a>
+    </div>
   </div>
 </body>
 </html>

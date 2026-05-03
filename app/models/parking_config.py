@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Float, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -20,6 +20,8 @@ class ParkingConfig(Base):
     total_capacity: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     open_time: Mapped[str] = mapped_column(String(5), default="00:00", nullable=False)  # "08:00"
     close_time: Mapped[str] = mapped_column(String(5), default="23:59", nullable=False)
+    debt_block_threshold: Mapped[float] = mapped_column(Float, default=500.0, nullable=False)
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),

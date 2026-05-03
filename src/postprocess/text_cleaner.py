@@ -105,9 +105,30 @@ class PlateCleaner:
         "gGisSuUoOcCi",
     )
 
+    # Türk plakası görüntü formatı: "34ABC1234" → "34 ABC 1234"
+    # Harf bölümünde tüm büyük harfleri kabul eder — validation değil display için
+    _TR_DISPLAY_RE = re.compile(
+        r'^(\d{2})([A-Z]{1,3})(\d{2,4})$'
+    )
+
     # ------------------------------------------------------------------
     # Temizleme
     # ------------------------------------------------------------------
+
+    def to_display(self, normalized: str) -> str:
+        """
+        Normalize edilmiş Türk plakasını boşluklu görüntü formatına çevirir.
+
+        "34ABC1234" → "34 ABC 1234"
+        "06AB123"   → "06 AB 123"
+        "81YZ99"    → "81 YZ 99"
+
+        TR formatına uymuyorsa (yabancı plaka vb.) olduğu gibi döndürür.
+        """
+        m = self._TR_DISPLAY_RE.fullmatch(normalized)
+        if m:
+            return f"{m.group(1)} {m.group(2)} {m.group(3)}"
+        return normalized
 
     def clean(self, raw: str) -> str:
         """

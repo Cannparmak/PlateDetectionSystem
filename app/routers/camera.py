@@ -37,6 +37,7 @@ from app.dependencies import get_current_staff_user
 from app.models.user import User
 from app.services.gate_controller import GateController
 from app.services.plate_checker import PlateChecker
+from src.pipeline import PlateVoter
 
 router = APIRouter(tags=["camera"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -134,10 +135,12 @@ async def _ws_stream_loop(websocket: WebSocket, db: Session, ocr_interval: float
     - Buffer drain: eski kareler drop edilir, pipeline her zaman en son kareyi işler.
     - OCR throttling: ocr_interval saniyede bir OCR çalışır, arada YOLO-only (hızlı) frame gönderilir.
     - Annotation cache: YOLO-only karelerde son annotated frame yeniden gönderilir.
+    - PlateVoter: Son 5 OCR sonucunu güven ağırlıklı oylama ile birleştirir (+%15-25 doğruluk).
     """
     pipeline = _get_pipeline()
     last_ocr_time = 0.0
-    last_ocr_detections: list[dict] = []  # Son OCR sonucunu sakla
+    last_ocr_detections: list[dict] = []
+    voter = PlateVoter(window=5)  # Bağlantı başına bir voter instance
 
     try:
         while True:
@@ -168,10 +171,24 @@ async def _ws_stream_loop(websocket: WebSocket, db: Session, ocr_interval: float
 
             if run_ocr:
                 last_ocr_time = now
+
+                if not result.plates:
+                    # Plaka görünmüyor — voter'ı sıfırla (farklı araç gelecek)
+                    voter.reset()
+
                 detections_out = []
                 for plate in result.plates:
+                    # Voter'a bu kareyi ekle (sadece TR formatı)
+                    if plate.plate_text and plate.plate_format == "TR":
+                        voter.add(plate.plate_text, plate.confidence_ocr)
+
+                    # Voted sonucu kullan — yeterli kare varsa daha doğru
+                    voted_text = voter.best() or plate.plate_text
+
                     det = {
-                        "plate_text": plate.plate_text,
+                        "plate_text": voted_text,
+                        "raw_plate_text": plate.plate_text,  # Ham tek kare sonucu
+                        "voted_frames": voter.frame_count,
                         "confidence_det": round(plate.confidence_det, 3),
                         "confidence_ocr": round(plate.confidence_ocr, 3),
                         "format_valid": plate.format_valid,
@@ -182,10 +199,11 @@ async def _ws_stream_loop(websocket: WebSocket, db: Session, ocr_interval: float
                         "customer_name": None,
                         "expires": None,
                     }
-                    if plate.plate_text:
-                        vehicle_info = _query_vehicle_info(db, plate.plate_text)
+                    if voted_text:
+                        vehicle_info = _query_vehicle_info(db, voted_text)
                         det.update(vehicle_info)
                     detections_out.append(det)
+
                 # TR plakaları öne al — aynı confidence olduğunda TR tercih edilsin
                 detections_out.sort(key=lambda d: (d.get("plate_format") != "TR", -d.get("confidence_det", 0)))
                 last_ocr_detections = detections_out
@@ -308,11 +326,11 @@ def _query_vehicle_info(db: Session, plate_text: str) -> dict:
             "fuzzy_matched_plate": fuzzy_matched_plate,
         }
     return {
-        "subscription_status": "EXPIRED" if vehicle else "NO_SUB",
+        "subscription_status": "NO_SUB",
         "customer_name": customer_name,
         "expires": None,
-        "can_enter": False,
-        "can_exit": is_inside,   # içerideyse çıkabilir (abonelik bitmişse de)
+        "can_enter": not is_inside,  # misafir olarak girebilir (borç eşiği check_entry'de yapılır)
+        "can_exit": is_inside,
         "is_inside": is_inside,
         "fuzzy_matched_plate": fuzzy_matched_plate,
     }
@@ -391,6 +409,8 @@ async def camera_entry(
         "expiry_warning": check.expiry_warning,
         "fuzzy_match": check.fuzzy_match,
         "fuzzy_original": check.fuzzy_original,
+        "user_type": check.user_type,
+        "total_debt": check.total_debt,
         "annotated_frame": result.annotated_image_b64,
     }
 
@@ -459,6 +479,10 @@ async def camera_exit(
         "subscription_info": check.subscription_info,
         "fuzzy_match": check.fuzzy_match,
         "fuzzy_original": check.fuzzy_original,
+        "user_type": check.user_type,
+        "fee_amount": check.fee_amount,
+        "total_debt": check.total_debt,
+        "bracket_name": check.bracket_name,
         "annotated_frame": result.annotated_image_b64,
     }
 

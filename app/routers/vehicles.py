@@ -91,7 +91,7 @@ async def create_vehicle(
     vehicle = Vehicle(
         customer_id=customer_id,
         plate_number=plate_number,
-        plate_display=plate_display.strip().upper(),
+        plate_display=_cleaner.to_display(plate_number),
         vehicle_type=vehicle_type,
         brand=brand.strip() or None,
         model=model.strip() or None,
@@ -151,7 +151,7 @@ async def update_vehicle(
     if exists:
         raise HTTPException(400, f"{plate_number} plakasi baska bir aracta kayitli.")
 
-    vehicle.plate_display = plate_display.strip().upper()
+    vehicle.plate_display = _cleaner.to_display(plate_number)
     vehicle.plate_number  = plate_number
     vehicle.vehicle_type  = vehicle_type
     vehicle.brand  = brand.strip() or None

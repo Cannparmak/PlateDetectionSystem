@@ -56,27 +56,17 @@ def seed_users(db: Session) -> None:
         print("  [ATLA] Kullanıcılar zaten mevcut.")
         return
 
-    users = [
-        User(
-            email=settings.ADMIN_EMAIL,
-            username="admin",
-            hashed_password=hash_pw(settings.ADMIN_PASSWORD),
-            full_name="Sistem Yöneticisi",
-            role="admin",
-        ),
-        User(
-            email=settings.KASIYER_EMAIL,
-            username="kasiyer",
-            hashed_password=hash_pw(settings.KASIYER_PASSWORD),
-            full_name="Ahmet Kasiyer",
-            role="kasiyer",
-        ),
-    ]
-    db.add_all(users)
+    admin = User(
+        email=settings.ADMIN_EMAIL,
+        username="admin",
+        hashed_password=hash_pw(settings.ADMIN_PASSWORD),
+        full_name="Sistem Yöneticisi",
+        role="admin",
+    )
+    db.add(admin)
     db.commit()
-    print(f"  [OK] {len(users)} kullanıcı oluşturuldu.")
-    print(f"       Admin:   {settings.ADMIN_EMAIL} / {settings.ADMIN_PASSWORD}")
-    print(f"       Kasiyer: {settings.KASIYER_EMAIL} / {settings.KASIYER_PASSWORD}")
+    print(f"  [OK] Admin kullanıcısı oluşturuldu.")
+    print(f"       Admin: {settings.ADMIN_EMAIL} / {settings.ADMIN_PASSWORD}")
 
 
 def seed_plans(db: Session) -> None:

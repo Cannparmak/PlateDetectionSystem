@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Borç Yönetimi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold" style="color:var(--text-primary)">Borç Yönetimi</h1>
+      <p class="text-sm mt-0.5" style="color:var(--text-subtle)">Ödenmemiş misafir park ücretleri</p>
+    </div>
+    <div class="flex items-center gap-3 px-5 py-3 rounded-2xl ghost-border" style="background:var(--bg-card)">
+      <span class="material-symbols-outlined text-error">receipt_long</span>
+      <div>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">Toplam Borç</p>
+        <p class="text-xl font-bold text-error">₺{{ "%.0f"|format(total_unpaid) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debts table -->
+  <div class="rounded-2xl ghost-border overflow-hidden" style="background:var(--bg-card)">
+    <div class="px-6 py-4 flex items-center justify-between" style="background:var(--bg-deep)">
+      <span class="text-sm font-bold" style="color:var(--text-primary)">Ödenmemiş Oturumlar</span>
+      <span class="text-xs px-3 py-1 rounded-full" style="background:rgba(255,180,171,0.12);color:#ffb4ab">
+        {{ sessions|length }} kayıt
+      </span>
+    </div>
+
+    {% if sessions %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr style="border-bottom:1px solid rgba(66,71,84,0.15)">
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Plaka</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Giriş</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Çıkış</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Süre</th>
+            <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Ücret</th>
+            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Ödeme</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y" style="border-color:rgba(66,71,84,0.08)">
+          {% for s in sessions %}
+          <tr class="hover:bg-surface-container-high transition-colors" x-data="{ open: false }">
+            <td class="px-6 py-3">
+              <p class="plate-font font-bold" style="color:var(--text-primary)">
+                {{ s.vehicle.plate_display if s.vehicle else '?' }}
+              </p>
+              {% if s.vehicle and s.vehicle.customer %}
+              <p class="text-[10px]" style="color:var(--text-subtle)">{{ s.vehicle.customer.full_name }}</p>
+              {% else %}
+              <p class="text-[10px]" style="color:var(--text-subtle)">Anonim</p>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <p class="text-xs" style="color:var(--text-primary)">{{ s.entry_time.strftime('%d.%m.%Y') }}</p>
+              <p class="text-[10px]" style="color:var(--text-subtle)">{{ s.entry_time.strftime('%H:%M') }}</p>
+            </td>
+            <td class="px-4 py-3">
+              {% if s.exit_time %}
+              <p class="text-xs" style="color:var(--text-primary)">{{ s.exit_time.strftime('%d.%m.%Y') }}</p>
+              <p class="text-[10px]" style="color:var(--text-subtle)">{{ s.exit_time.strftime('%H:%M') }}</p>
+              {% else %}
+              <p class="text-xs" style="color:var(--text-subtle)">—</p>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if s.duration_minutes %}
+              {% set h = s.duration_minutes // 60 %}
+              {% set m = s.duration_minutes % 60 %}
+              <p class="text-xs" style="color:var(--text-primary)">
+                {% if h %}{{ h }}s {{ m }}dk{% else %}{{ m }}dk{% endif %}
+              </p>
+              {% else %}
+              <p class="text-xs" style="color:var(--text-subtle)">—</p>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <p class="text-base font-bold text-error">₺{{ "%.0f"|format(s.fee_amount) }}</p>
+            </td>
+            <td class="px-4 py-3">
+              <!-- Payment button with dropdown -->
+              <div class="flex justify-center" @click.outside="open = false">
+                <button @click="open = !open"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:brightness-110 active:scale-95 transition-all"
+                        style="background:rgba(0,165,114,0.15);color:#4edea3;border:1px solid rgba(0,165,114,0.3)">
+                  <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1;">payments</span>
+                  Öde
+                  <span class="material-symbols-outlined text-xs">expand_more</span>
+                </button>
+                <!-- Dropdown -->
+                <div x-show="open" x-transition
+                     class="absolute mt-8 z-20 rounded-xl ghost-border py-1 min-w-[150px]"
+                     style="background:var(--bg-raised)">
+                  <form method="post" action="/admin/debts/{{ s.id }}/pay">
+                    <input type="hidden" name="payment_method" value="nakit"/>
+                    <button type="submit"
+                            class="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors"
+                            style="color:var(--text-primary)">
+                      <span class="material-symbols-outlined text-base">payments</span>
+                      Nakit
+                    </button>
+                  </form>
+                  <form method="post" action="/admin/debts/{{ s.id }}/pay">
+                    <input type="hidden" name="payment_method" value="kredi_karti"/>
+                    <button type="submit"
+                            class="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors"
+                            style="color:var(--text-primary)">
+                      <span class="material-symbols-outlined text-base">credit_card</span>
+                      Kredi Kartı
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:1px solid rgba(66,71,84,0.20)">
+            <td colspan="4" class="px-6 py-3 text-sm font-bold" style="color:var(--text-subtle)">TOPLAM</td>
+            <td class="px-4 py-3 text-right text-lg font-bold text-error">₺{{ "%.0f"|format(total_unpaid) }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="py-16 text-center">
+      <span class="material-symbols-outlined text-5xl mb-4 block" style="color:var(--text-subtle);font-variation-settings:'FILL' 1;">check_circle</span>
+      <p class="font-semibold" style="color:var(--text-primary)">Ödenmemiş borç yok</p>
+      <p class="text-sm mt-1" style="color:var(--text-subtle)">Tüm misafir park ücretleri tahsil edilmiş.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

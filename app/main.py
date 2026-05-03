@@ -86,7 +86,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # Router'ları ekle
 # ------------------------------------------------------------------
 
-from app.routers import auth, camera, customers, vehicles, subscriptions, sessions, admin, payment, dashboard
+from app.routers import auth, camera, customers, vehicles, subscriptions, sessions, admin, payment, dashboard, plate_query
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
@@ -97,6 +97,7 @@ app.include_router(subscriptions.router)
 app.include_router(sessions.router)
 app.include_router(admin.router)
 app.include_router(payment.router)
+app.include_router(plate_query.router)
 
 # ------------------------------------------------------------------
 # Ana sayfa
@@ -104,7 +105,8 @@ app.include_router(payment.router)
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    """Ana sayfa — giriş gerektirmez, 3 kartlı landing page."""
+    return templates.TemplateResponse(request, "index.html", {})
 
 
 # ------------------------------------------------------------------

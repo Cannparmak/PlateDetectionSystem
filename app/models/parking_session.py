@@ -45,6 +45,16 @@ class ParkingSession(Base):
         DateTime, server_default=func.now(), nullable=False
     )
 
+    # Misafir ücretlendirme alanları
+    is_guest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    fee_amount: Mapped[float | None] = mapped_column(Float, nullable=True)   # NULL = abone (ücretsiz)
+    is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(String(50), nullable=True)  # nakit / kredi_karti
+    processed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
     # İlişkiler
     vehicle: Mapped["Vehicle"] = relationship("Vehicle", back_populates="parking_sessions")
     subscription: Mapped["Subscription | None"] = relationship("Subscription")

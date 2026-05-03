@@ -53,6 +53,21 @@
       </a>
     </div>
   {% endif %}
+
+  {% set debt = vehicle_debts.get(v.id, 0) %}
+  {% if debt > 0 %}
+  <div class="mt-3 p-4 rounded-2xl flex items-center justify-between"
+       style="background:rgba(147,0,10,0.12);border:1px solid rgba(147,0,10,0.3)">
+    <div class="flex items-center gap-3">
+      <span class="material-symbols-outlined text-[#ffb4ab]">receipt_long</span>
+      <div>
+        <p class="text-sm font-semibold text-[#ffb4ab]">Ödenmemiş Borç</p>
+        <p class="text-xs text-[#8c909f]">Park ücreti tahsilat bekliyor</p>
+      </div>
+    </div>
+    <p class="text-xl font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(debt) }}</p>
+  </div>
+  {% endif %}
 </div>
 {% else %}
 <div class="bg-[#1e1f26] rounded-3xl p-10 ghost-border text-center">

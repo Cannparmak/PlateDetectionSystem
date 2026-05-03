@@ -109,20 +109,61 @@ class PlateOCR:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _deskew(bgr: np.ndarray) -> np.ndarray:
+        """
+        Eğik plakayı düzeltir (±15° tolerans).
+
+        Hough çizgi tespiti ile yatay çizgilerin medyan açısını bulur,
+        görüntüyü o açı kadar döndürür. Küçük veya düşük kontrastlı
+        görüntülerde çizgi tespit edilemezse orijinali döndürür.
+        """
+        gray  = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        lines = cv2.HoughLinesP(
+            edges, 1, np.pi / 180,
+            threshold=30, minLineLength=20, maxLineGap=8,
+        )
+        if lines is None:
+            return bgr
+
+        angles = []
+        for x1, y1, x2, y2 in lines[:, 0]:
+            if x2 != x1:
+                angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
+                if abs(angle) < 15:
+                    angles.append(angle)
+
+        if not angles:
+            return bgr
+
+        median_angle = float(np.median(angles))
+        # 0.5°'den küçük açılar için dönüştürme maliyetine değmez
+        if abs(median_angle) < 0.5:
+            return bgr
+
+        h, w = bgr.shape[:2]
+        M    = cv2.getRotationMatrix2D((w / 2, h / 2), median_angle, 1.0)
+        return cv2.warpAffine(bgr, M, (w, h), borderMode=cv2.BORDER_REPLICATE)
+
+    @staticmethod
     def _preprocess_bgr(crop: np.ndarray) -> np.ndarray:
         """
         BGR kırpıntıyı iyileştirir. Renk dönüşümü yapılmaz.
 
         İşlem sırası (doğruluk etkisine göre):
-        1. CLAHE — adaptif kontrast (en yüksek etki, +%25 doğruluk)
-        2. Bilateral filtre — gürültü azalt, karakter kenarlarını koru
-        3. Upscale — çok küçük kırpıntıları büyüt
-        4. Post-upscale keskinleştirme
+        1. Deskew — eğik plaka düzeltme
+        2. CLAHE — adaptif kontrast (en yüksek etki, +%25 doğruluk)
+        3. Bilateral filtre — gürültü azalt, karakter kenarlarını koru
+        4. Upscale — çok küçük kırpıntıları büyüt
+        5. Post-upscale keskinleştirme
 
         NOT: Alt-crop kaldırıldı. Model keep_aspect_ratio=False ile 140×70'e
         stretch ettiğinden crop yapmak aspect ratio bozar ve city-name bağlamını
         siler; tam plaka görseli her zaman daha doğru sonuç verir.
         """
+        # ── Deskew ──────────────────────────────────────────────────────
+        crop = PlateOCR._deskew(crop)
+
         h, w = crop.shape[:2]
 
         # ── CLAHE (LAB L kanalında) ──────────────────────────────────────

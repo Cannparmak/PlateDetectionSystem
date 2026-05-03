@@ -36,14 +36,14 @@ def _decode_token(token: str) -> dict:
 
 
 # ------------------------------------------------------------------
-# Staff (Admin + Kasiyer)
+# Staff (Admin)
 # ------------------------------------------------------------------
 
 def get_current_staff_user(
     access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
-    """Admin veya Kasiyer — ikisi de erişebilir."""
+    """Admin kullanıcısı doğrulama."""
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,17 +61,7 @@ def get_current_staff_user(
 
 
 def require_admin(user: User = Depends(get_current_staff_user)) -> User:
-    """Sadece Admin erişebilir."""
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bu islem icin admin yetkisi gereklidir.",
-        )
-    return user
-
-
-def require_kasiyer(user: User = Depends(get_current_staff_user)) -> User:
-    """Admin veya Kasiyer erişebilir (alias for clarity)."""
+    """Admin yetkisi gerektirir (tüm staff zaten admin)."""
     return user
 
 

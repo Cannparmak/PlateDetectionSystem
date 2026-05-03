@@ -127,9 +127,10 @@
               <p class="text-xs" style="color:var(--text-subtle)" x-text="cam.result.message"></p>
             </div>
           </div>
-          <template x-if="cam.result.success && cam.result.customer_name">
+          <!-- Subscriber exit details -->
+          <template x-if="cam.result.success && cam.result.user_type === 'subscriber'">
             <div class="pt-3 border-t space-y-1.5" style="border-color:rgba(0,165,114,0.25)">
-              <div class="flex items-center gap-2">
+              <div x-show="cam.result.customer_name" class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm text-tertiary">person</span>
                 <span class="text-sm font-semibold" style="color:var(--text-primary)" x-text="cam.result.customer_name"></span>
               </div>
@@ -137,6 +138,37 @@
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-sm text-tertiary">card_membership</span>
                   <span class="text-xs" style="color:var(--text-muted)" x-text="cam.result.subscription_info"></span>
+                </div>
+              </template>
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-tertiary">check_circle</span>
+                <span class="text-xs text-tertiary">Abonelik kapsamında — ücretsiz çıkış</span>
+              </div>
+            </div>
+          </template>
+          <!-- Guest exit — fee display -->
+          <template x-if="cam.result.success && cam.result.action === 'ALLOW_EXIT_GUEST'">
+            <div class="pt-3 border-t space-y-2" style="border-color:rgba(0,165,114,0.25)">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-yellow-400">person</span>
+                <span class="text-xs font-bold text-yellow-400"
+                      x-text="cam.result.user_type === 'anonymous_guest' ? 'Anonim Misafir' : 'Kayıtlı Misafir'"></span>
+              </div>
+              <template x-if="cam.result.fee_amount !== null && cam.result.fee_amount !== undefined">
+                <div class="flex items-center justify-between px-3 py-2 rounded-xl"
+                     style="background:rgba(0,165,114,0.12);border:1px solid rgba(0,165,114,0.2)">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Park Ücreti</p>
+                    <p class="text-xs" style="color:var(--text-subtle)" x-text="cam.result.bracket_name || ''"></p>
+                  </div>
+                  <p class="text-xl font-bold text-tertiary" x-text="'₺' + (cam.result.fee_amount || 0).toFixed(0)"></p>
+                </div>
+              </template>
+              <template x-if="cam.result.total_debt > 0">
+                <div class="flex items-center justify-between px-3 py-1.5 rounded-lg"
+                     style="background:rgba(147,0,10,0.12)">
+                  <span class="text-xs text-error">Toplam Borç</span>
+                  <span class="text-sm font-bold text-error" x-text="'₺' + cam.result.total_debt.toFixed(0)"></span>
                 </div>
               </template>
             </div>
@@ -173,6 +205,25 @@
           </div>
         </template>
 
+
+        <!-- Misafir 5 saniyelik otomatik çıkış geri sayımı -->
+        <template x-if="cam.detection?.can_exit && cam.detection?.subscription_status !== 'ACTIVE' && !cam.processing && cam.detection.plate_text !== cam.lastTriggeredPlate">
+          <div class="rounded-xl px-4 py-3" style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30)">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-yellow-400" style="font-variation-settings:'FILL' 1;">timer</span>
+                <span class="text-xs font-bold text-yellow-400">Otomatik Çıkış</span>
+              </div>
+              <span class="text-sm font-bold font-mono text-yellow-400"
+                    x-text="Math.max(0, Math.ceil((5000 - cam.guestElapsed) / 1000)) + 's'"></span>
+            </div>
+            <div class="h-1.5 rounded-full overflow-hidden" style="background:rgba(245,158,11,0.15)">
+              <div class="h-1.5 rounded-full"
+                   style="background:#fbbf24;transition:width 0.1s linear"
+                   :style="'width:' + (cam.guestElapsed / 50) + '%'"></div>
+            </div>
+          </div>
+        </template>
 
         <div class="flex items-center gap-2 flex-wrap">
           <template x-if="cam.detection?.confirmed">
@@ -254,8 +305,14 @@
                     class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary-container/30 text-tertiary">
                 TESPİT ✓
               </span>
-              <span x-show="cam.detection?.plate_text !== item.plate"
-                    class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-container/20 text-error">İÇERİDE</span>
+              <template x-if="cam.detection?.plate_text !== item.plate">
+                <span x-show="!item.is_guest"
+                      class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-container/20 text-error">İÇERİDE</span>
+              </template>
+              <template x-if="cam.detection?.plate_text !== item.plate">
+                <span x-show="item.is_guest"
+                      class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400">MİSAFİR</span>
+              </template>
             </div>
           </template>
           <template x-if="insideVehicles.length === 0">
@@ -285,9 +342,12 @@ function singleCamera(side, wsPath, apiPath) {
       ws: null, stream: null, interval: null,
       detection: null, result: null,
       fps: 0, ms: 0, deviceId: '',
-      plateHistory: [],        // temporal voting: last 5 OCR plate texts
-      lastTriggeredPlate: '',  // aynı plakayı tekrar tetiklememek için
-      exitGraceUntil: 0,       // başarılı çıkıştan sonra uyarıyı bastırmak için timestamp
+      plateHistory: [],
+      lastTriggeredPlate: '',
+      exitGraceUntil: 0,
+      plateFirstSeenAt: 0,     // misafir 5s kuralı: plaka ilk görüldüğü zaman
+      currentTrackedPlate: '', // hangi plakayı sayıyoruz
+      guestElapsed: 0,         // geçen ms (0-5000) — UI countdown için
     },
 
     init() {
@@ -296,6 +356,12 @@ function singleCamera(side, wsPath, apiPath) {
       this.fetchOccupancy();
       this.fetchActiveVehicles();
       setInterval(() => { this.fetchOccupancy(); this.fetchActiveVehicles(); }, 15000);
+      // Misafir geri sayım — her 100ms güncelle
+      setInterval(() => {
+        this.cam.guestElapsed = this.cam.plateFirstSeenAt > 0
+          ? Math.min(5000, Date.now() - this.cam.plateFirstSeenAt)
+          : 0;
+      }, 100);
     },
 
     async enumerateCameras() {
@@ -337,11 +403,30 @@ function singleCamera(side, wsPath, apiPath) {
 
           this.cam.detection = best;
 
-          // ── Otomatik çıkış tetikleme ──────────────────────
-          // Onaylanmış + içeride kayıt var + işlem yok + daha önce tetiklenmemiş
+          // ── Plaka takibi — misafir 5s kuralı ─────────────
+          if (best.plate_text && best.plate_text !== this.cam.currentTrackedPlate) {
+            this.cam.plateFirstSeenAt  = Date.now();
+            this.cam.currentTrackedPlate = best.plate_text;
+          }
+          // ─────────────────────────────────────────────────
+
+          // ── Abone: onaylanır onaylanmaz tetikle (hızlı) ──
           if (
             best.confirmed &&
             best.can_exit &&
+            best.subscription_status === 'ACTIVE' &&
+            !this.cam.processing &&
+            best.plate_text !== this.cam.lastTriggeredPlate
+          ) {
+            this.cam.lastTriggeredPlate = best.plate_text;
+            this.manualTrigger();
+          }
+          // ── Misafir: 5 saniye tutarlı okuma sonrası tetikle
+          const guestMs = this.cam.plateFirstSeenAt ? (Date.now() - this.cam.plateFirstSeenAt) : 0;
+          if (
+            guestMs >= 5000 &&
+            best.can_exit &&
+            best.subscription_status !== 'ACTIVE' &&
             !this.cam.processing &&
             best.plate_text !== this.cam.lastTriggeredPlate
           ) {
@@ -351,6 +436,8 @@ function singleCamera(side, wsPath, apiPath) {
           // ─────────────────────────────────────────────────
         } else {
           this.cam.detection = null;
+          this.cam.plateFirstSeenAt  = 0;
+          this.cam.currentTrackedPlate = '';
         }
       };
       this.cam.ws.onclose = () => {
@@ -395,7 +482,10 @@ function singleCamera(side, wsPath, apiPath) {
         this.cam.stream.getTracks().forEach(t => t.stop());
         clearInterval(this.cam.interval);
         this.cam.active = false;
-        this.cam.plateHistory = [];   // reset voting history on camera switch
+        this.cam.plateHistory = [];
+        this.cam.plateFirstSeenAt  = 0;
+        this.cam.currentTrackedPlate = '';
+        this.cam.guestElapsed = 0;
         document.getElementById('cam-placeholder').style.display = 'flex';
         document.getElementById('cam-img').style.display = 'none';
       }
@@ -424,10 +514,11 @@ function singleCamera(side, wsPath, apiPath) {
         if (data.success && data.plate_text) {
           this.fetchOccupancy();
           this.fetchActiveVehicles();
-          // Çıkış yapıldı — detection sıfırla ki liste güncel görünsün
           this.cam.plateHistory = [];
           this.cam.detection = null;
-          // 8 sn boyunca "araç otoparkta bulunmuyor" uyarısını bastır
+          this.cam.plateFirstSeenAt  = 0;
+          this.cam.currentTrackedPlate = '';
+          this.cam.guestElapsed = 0;
           this.cam.exitGraceUntil = Date.now() + 8000;
         }
       } catch (e) {

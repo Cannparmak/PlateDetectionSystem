@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer
 
 from app.database import Base
 
@@ -20,9 +21,10 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    customer_id: Mapped[int] = mapped_column(
-        ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
+    customer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Normalize edilmiş plaka — boşluksuz büyük harf (DB araması için)
     plate_number: Mapped[str] = mapped_column(
         String(20), unique=True, index=True, nullable=False
@@ -41,7 +43,7 @@ class Vehicle(Base):
     )
 
     # İlişkiler
-    customer: Mapped["Customer"] = relationship("Customer", back_populates="vehicles")
+    customer: Mapped["Customer | None"] = relationship("Customer", back_populates="vehicles")
     subscriptions: Mapped[list["Subscription"]] = relationship(
         "Subscription", back_populates="vehicle", cascade="all, delete-orphan"
     )

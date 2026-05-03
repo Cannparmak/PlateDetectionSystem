@@ -16,6 +16,7 @@ from app.models.subscription import Subscription
 from app.models.subscription_plan import SubscriptionPlan
 from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.models.parking_rate_bracket import ParkingRateBracket
 from app.services.auth_service import hash_password
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -150,6 +151,53 @@ async def reports(
         "daily_entries": daily_entries,
         "plan_stats": plan_stats,
     })
+
+
+@router.get("/debts", response_class=HTMLResponse)
+async def admin_debts(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Ödenmemiş misafir borçları listesi."""
+    sessions = (
+        db.query(ParkingSession)
+        .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
+        .filter(
+            ParkingSession.is_guest == True,
+            ParkingSession.is_paid == False,
+            ParkingSession.fee_amount.isnot(None),
+            ParkingSession.is_active == False,
+        )
+        .order_by(ParkingSession.exit_time.desc())
+        .all()
+    )
+    total_unpaid = round(sum(s.fee_amount for s in sessions if s.fee_amount), 2)
+    return templates.TemplateResponse(request, "admin/debts.html", {
+        "user": user,
+        "sessions": sessions,
+        "total_unpaid": total_unpaid,
+    })
+
+
+@router.post("/debts/{session_id}/pay")
+async def mark_debt_paid(
+    session_id: int,
+    payment_method: str = Form(default="nakit"),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Seçilen borç oturumunu ödenmiş olarak işaretle."""
+    from datetime import datetime as dt
+    session = db.query(ParkingSession).get(session_id)
+    if not session or not session.is_guest or session.is_paid:
+        raise HTTPException(400, "Gecersiz istek.")
+    session.is_paid = True
+    session.paid_at = dt.utcnow()
+    session.payment_method = payment_method
+    session.processed_by_user_id = user.id
+    db.commit()
+    return RedirectResponse("/admin/debts", status_code=302)
 
 
 @router.post("/config")

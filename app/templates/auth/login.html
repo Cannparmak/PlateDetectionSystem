@@ -90,11 +90,16 @@
       </form>
     </div>
 
-    <p class="text-center text-[#8c909f] text-sm mt-6">
-      <span x-text="$store.app.isEN ? 'For customer portal ' : 'Müşteri portalı için '">Müşteri portalı için </span>
-      <a href="/musteri/login" class="text-[#adc6ff] hover:underline"
-         x-text="$store.app.isEN ? 'click here' : 'buraya tıklayın'">buraya tıklayın</a>
-    </p>
+    <div class="mt-6 flex flex-col items-center gap-2 text-sm text-[#8c909f]">
+      <a href="/musteri/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">person</span>
+        Müşteri girişi
+      </a>
+      <a href="/plaka-sorgula" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
+        <span class="material-symbols-outlined text-base">search</span>
+        Plaka sorgula / borç öde
+      </a>
+    </div>
   </div>
 </body>
 </html>

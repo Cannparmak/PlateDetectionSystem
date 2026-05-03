@@ -112,6 +112,7 @@ async def get_active_vehicles(db: Session = Depends(get_db)):
             "customer_name": s.vehicle.customer.full_name if s.vehicle and s.vehicle.customer else None,
             "entry_time": s.entry_time.strftime("%H:%M"),
             "entry_date": s.entry_time.strftime("%d.%m"),
+            "is_guest": s.is_guest,
         }
         for s in sessions
     ]

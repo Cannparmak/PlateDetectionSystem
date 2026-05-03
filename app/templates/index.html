@@ -1,9 +1,123 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="dark">
 <head>
   <meta charset="utf-8"/>
-  <meta http-equiv="refresh" content="0; url=/dashboard"/>
-  <title>CanPark</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CanPark — Otopark Yönetim Sistemi</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = { darkMode:"class", theme:{ extend:{ colors:{
+      "primary":"#adc6ff","primary-container":"#4d8eff","surface":"#111319",
+      "surface-container":"#1e1f26","surface-container-low":"#191b22",
+      "surface-container-high":"#282a30","surface-container-highest":"#33343b",
+      "surface-container-lowest":"#0c0e14","on-surface":"#e2e2eb",
+      "on-surface-variant":"#c2c6d6","outline-variant":"#424754","outline":"#8c909f",
+      "tertiary":"#4edea3","tertiary-container":"#00a572","error":"#ffb4ab",
+      "error-container":"#93000a",
+    }}}}
+  </script>
+  <style>
+    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
+    body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}
+    html:not(.dark) body{background-color:#f0f3f8;color:#1a1c23;}
+    html:not(.dark) .bg-\[#191b22\]{background-color:#eef0f8!important;}
+    html:not(.dark) .bg-\[#1e1f26\]{background-color:#ffffff!important;box-shadow:0 1px 4px rgba(28,33,40,0.08);}
+    html:not(.dark) .bg-\[#0c0e14\]{background-color:#e6eaf2!important;}
+    html:not(.dark) .text-\[#8c909f\]{color:#6b6f82!important;}
+    html:not(.dark) .text-\[#e2e2eb\]{color:#1a1c23!important;}
+    html:not(.dark) .text-\[#c2c6d6\]{color:#3a3d52!important;}
+    .ghost-border{border:1px solid rgba(66,71,84,0.15);}
+    html:not(.dark) .ghost-border{border:1px solid rgba(28,33,40,0.10);}
+    .card-hover:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(77,142,255,0.12);}
+    html:not(.dark) .card-hover:hover{box-shadow:0 8px 24px rgba(26,127,55,0.12);}
+    *,*::before,*::after{transition:background-color 0.2s ease,color 0.15s ease,transform 0.15s ease,box-shadow 0.15s ease;}
+    .material-symbols-outlined{transition:none!important;}
+  </style>
+  <script src="/static/js/app.js"></script>
 </head>
-<body></body>
+<body class="min-h-screen flex flex-col" x-data x-init="$store.app.init()">
+
+  <!-- Header -->
+  <header class="bg-[#191b22] h-14 flex items-center justify-between px-6 ghost-border sticky top-0 z-40">
+    <span class="text-lg font-bold text-[#adc6ff] tracking-tighter">CanPark</span>
+    <div class="flex items-center gap-2">
+      <button @click="$store.app.toggleTheme()"
+              class="w-8 h-8 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+        <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-16 space-y-12">
+
+    <div class="text-center space-y-3 max-w-md">
+      <h1 class="text-4xl font-bold text-[#adc6ff] tracking-tighter">CanPark</h1>
+      <p class="text-[#8c909f]">Otopark Yönetim Sistemi</p>
+    </div>
+
+    <!-- 3 cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full max-w-3xl">
+
+      <!-- Admin Login -->
+      <a href="/login"
+         class="card-hover bg-[#1e1f26] rounded-3xl p-7 ghost-border flex flex-col items-center text-center gap-4 cursor-pointer no-underline">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
+             style="background:rgba(77,142,255,0.12);border:1px solid rgba(77,142,255,0.2)">
+          <span class="material-symbols-outlined text-3xl text-[#adc6ff]" style="font-variation-settings:'FILL' 1;">admin_panel_settings</span>
+        </div>
+        <div>
+          <p class="text-base font-bold text-[#e2e2eb]">Admin Girişi</p>
+          <p class="text-xs text-[#8c909f] mt-1">Yönetici paneline eriş</p>
+        </div>
+        <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold text-[#002e6a]"
+              style="background:#adc6ff">
+          Giriş Yap
+        </span>
+      </a>
+
+      <!-- Customer Login -->
+      <a href="/musteri/login"
+         class="card-hover bg-[#1e1f26] rounded-3xl p-7 ghost-border flex flex-col items-center text-center gap-4 cursor-pointer no-underline">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
+             style="background:rgba(0,165,114,0.12);border:1px solid rgba(0,165,114,0.25)">
+          <span class="material-symbols-outlined text-3xl text-[#4edea3]" style="font-variation-settings:'FILL' 1;">person</span>
+        </div>
+        <div>
+          <p class="text-base font-bold text-[#e2e2eb]">Müşteri Girişi</p>
+          <p class="text-xs text-[#8c909f] mt-1">Abonelik ve araç bilgilerim</p>
+        </div>
+        <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold"
+              style="background:rgba(0,165,114,0.18);color:#4edea3;border:1px solid rgba(0,165,114,0.3)">
+          Giriş Yap
+        </span>
+      </a>
+
+      <!-- Plate Query -->
+      <a href="/plaka-sorgula"
+         class="card-hover bg-[#1e1f26] rounded-3xl p-7 ghost-border flex flex-col items-center text-center gap-4 cursor-pointer no-underline">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
+             style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25)">
+          <span class="material-symbols-outlined text-3xl text-yellow-400" style="font-variation-settings:'FILL' 1;">search</span>
+        </div>
+        <div>
+          <p class="text-base font-bold text-[#e2e2eb]">Plaka Sorgula</p>
+          <p class="text-xs text-[#8c909f] mt-1">Park borç durumunu öğren</p>
+        </div>
+        <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold"
+              style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">
+          Sorgula
+        </span>
+      </a>
+
+    </div>
+
+    <p class="text-xs text-[#8c909f]">Giriş gerektirmez — plaka numaranızı girerek borç durumunuzu öğrenebilirsiniz.</p>
+
+  </main>
+
+</body>
 </html>

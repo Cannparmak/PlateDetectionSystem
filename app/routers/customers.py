@@ -17,6 +17,9 @@ from app.models.subscription_plan import SubscriptionPlan
 from app.models.vehicle import Vehicle
 from app.models.user import User
 from app.services.auth_service import hash_password
+from src.postprocess.text_cleaner import PlateCleaner
+
+_cleaner = PlateCleaner()
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -210,7 +213,7 @@ async def create_customer(
     vehicle = Vehicle(
         customer_id=customer.id,
         plate_number=plate,
-        plate_display=plate_number.upper().strip(),
+        plate_display=_cleaner.to_display(plate),
         vehicle_type="otomobil",
     )
     db.add(vehicle)

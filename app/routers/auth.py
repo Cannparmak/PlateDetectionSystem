@@ -65,7 +65,7 @@ async def login(
         db.rollback()
 
     token = create_staff_token(user.id)
-    redirect_url = "/admin" if user.role == "admin" else "/dashboard/kasiyer"
+    redirect_url = "/admin"
     response = RedirectResponse(redirect_url, status_code=302)
     response.set_cookie(
         "access_token", token,
