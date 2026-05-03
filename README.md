@@ -9,8 +9,10 @@ Kamera görüntüsünden araç plakasını otomatik tanıyan, abonelik ve ödeme
 - **Canlı Kamera** — WebSocket üzerinden anlık görüntü akışı
 - **Giriş / Çıkış Yönetimi** — Plakaya göre otomatik tanıma ve bariyer kontrolü
 - **Abonelik Sistemi** — Aylık/yıllık abonelik planları, müşteri portalı
-- **Admin Paneli** — Raporlar, kullanıcı yönetimi, otopark kapasitesi
-- **Kasiyör Ekranı** — Manuel işlem ve ödeme alma
+- **Admin Paneli** — Raporlar, kullanıcı yönetimi, otopark kapasitesi, borç takibi
+- **Misafir Ücretlendirme** — Dilim bazlı sabit ücret tarifesi, 24 saat üzeri günlük tavan desteği
+- **Plaka Borç Sorgulama** — Giriş gerektirmeden plaka ile borç ve aktif oturum sorgulama
+- **Online Ödeme Akışı** — Plaka sorgula → ödeme formu → başarılı onay sayfası
 - **Bariyer Kontrolü** — Serial port (COM) üzerinden fiziksel kapı entegrasyonu
 
 ## Teknoloji Yığını
@@ -32,16 +34,31 @@ Kamera görüntüsünden araç plakasını otomatik tanıyan, abonelik ve ödeme
 PlateDetectionSystem/
 ├── app/                    # FastAPI uygulaması
 │   ├── models/             # SQLAlchemy veritabanı modelleri
+│   │   ├── parking_rate_bracket.py   # Ücret dilimleri
+│   │   ├── parking_session.py        # Oturum (giriş/çıkış)
+│   │   └── ...
 │   ├── routers/            # API endpoint'leri
-│   ├── services/           # İş mantığı (auth, gate, plate checker)
-│   ├── templates/          # Jinja2 HTML şablonları
-│   └── static/             # CSS, JS, görseller
+│   │   ├── plate_query.py  # Plaka sorgulama ve online ödeme
+│   │   └── ...
+│   ├── services/           # İş mantığı
+│   │   ├── fee_calculator.py   # Dilim bazlı ücret hesaplama
+│   │   ├── plate_checker.py    # Plaka doğrulama ve fuzzy eşleştirme
+│   │   └── ...
+│   └── templates/          # Jinja2 HTML şablonları
+│       ├── plaka_sorgula.html          # Misafir borç sorgulama
+│       ├── plaka_odeme.html            # Ödeme formu
+│       ├── plaka_odeme_basarili.html   # Ödeme onayı
+│       ├── admin/debts.html            # Admin borç görünümü
+│       └── ...
 ├── src/                    # ML pipeline
 │   ├── detection/          # YOLO dedektör
 │   ├── ocr/                # OCR okuyucu
 │   └── postprocess/        # Plaka metin temizleme
 ├── models/                 # Eğitilmiş model dosyaları (.pt, .onnx, OpenVINO)
-├── scripts/                # Veri hazırlama ve eğitim scriptleri
+├── scripts/                # Yardımcı scriptler
+│   ├── seed_db.py          # Örnek veri ve ücret dilimleri
+│   ├── migrate.py          # Veritabanı migrasyon
+│   └── verify.py           # Kurulum doğrulama
 ├── docs/                   # Proje dokümantasyonu
 ├── requirements.txt
 └── run.py                  # Başlatıcı
@@ -73,8 +90,11 @@ pip install -r requirements.txt
 copy .env.example .env
 # .env dosyasını düzenle (SECRET_KEY, admin bilgileri vb.)
 
-# 5. Veritabanını başlat ve örnek veri ekle
+# 5. Veritabanını başlat, örnek veri ve ücret dilimlerini ekle
 python scripts/seed_db.py
+
+# (Opsiyonel) Kurulumu doğrula
+python scripts/verify.py
 
 # 6. Uygulamayı başlat
 python run.py
