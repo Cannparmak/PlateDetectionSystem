@@ -108,8 +108,7 @@ Uygulama `http://localhost:8000` adresinde çalışır.
 
 | Rol | E-posta | Şifre |
 |---|---|---|
-| Admin | admin@otopark.local | admin123 |
-| Kasiyör | kasiyer@otopark.local | kasiyer123 |
+| Admin | admin@gmail.com | Admin123 |
 
 > Canlıya geçmeden önce `.env` içindeki `SECRET_KEY` ve şifreleri mutlaka değiştir.
 
