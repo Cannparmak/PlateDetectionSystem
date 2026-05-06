@@ -1,0 +1,64 @@
+{% extends "base_customer.html" %}
+{% block title %}{{ t('portal_payment_success') }}{% endblock %}
+{% block content %}
+
+<div class="max-w-lg mx-auto py-8">
+  <div class="flex flex-col items-center text-center mb-10">
+    <div class="w-24 h-24 rounded-full bg-[#00a572]/10 flex items-center justify-center mb-5"
+         style="box-shadow: 0 0 30px rgba(0,165,114,0.2)">
+      <span class="material-symbols-outlined text-[#4edea3] text-5xl" style="font-variation-settings:'FILL' 1;">check_circle</span>
+    </div>
+    <h1 class="text-3xl font-bold text-white mb-2" x-text="$store.app.t('portal_payment_success')">Ödeme Başarılı!</h1>
+    <p class="text-[#8c909f]" x-text="$store.app.t('portal_activation_ok')">Aboneliğiniz aktive edildi. İyi sürüşler!</p>
+  </div>
+
+  <div class="bg-[#1e1f26] rounded-3xl p-6 ghost-border space-y-4 mb-6">
+    <div class="flex items-center gap-3 pb-4 border-b border-[#424754]/20">
+      <div class="w-12 h-12 rounded-2xl bg-[#4d8eff]/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-[#adc6ff]">directions_car</span>
+      </div>
+      <div>
+        <p class="font-mono font-bold text-white text-lg plate-font">
+          {{ subscription.vehicle.plate_display if subscription.vehicle else '—' }}
+        </p>
+        <p class="text-sm text-[#8c909f]">{{ customer.full_name }}</p>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-[#8c909f]" x-text="$store.app.t('lbl_plan')">Plan</span>
+        <span class="text-white font-semibold">{{ subscription.plan.name if subscription.plan else '—' }}</span>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-[#8c909f]" x-text="$store.app.t('lbl_start')">Başlangıç</span>
+        <span class="text-white">{{ subscription.start_date.strftime('%d.%m.%Y') }}</span>
+      </div>
+      <div class="flex justify-between items-center text-sm">
+        <span class="text-[#8c909f]" x-text="$store.app.t('lbl_end')">Bitiş</span>
+        <span class="text-white">{{ subscription.end_date.strftime('%d.%m.%Y') }}</span>
+      </div>
+      <div class="flex justify-between items-center pt-3 border-t border-[#424754]/20">
+        <span class="text-[#8c909f]" x-text="$store.app.t('portal_paid_amount')">Ödenen Tutar</span>
+        <span class="text-2xl font-bold text-white">{{ subscription.total_paid | int }} ₺</span>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between p-3 bg-[#00a572]/10 rounded-2xl">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#4edea3] text-base" style="font-variation-settings:'FILL' 1;">verified</span>
+        <span class="text-sm font-semibold text-[#4edea3]" x-text="$store.app.t('portal_sub_active')">Abonelik Aktif</span>
+      </div>
+      <span class="text-xs text-[#4edea3] font-bold">{{ subscription.days_remaining if subscription.is_active else 0 }} <span x-text="$store.app.t('portal_days_left')">gün kaldı</span></span>
+    </div>
+  </div>
+
+  <a href="/musteri/dashboard"
+     class="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-[#adc6ff] text-[#002e6a] font-bold hover:brightness-110 active:scale-95 transition-all"
+     style="box-shadow: 0 0 20px rgba(77,142,255,0.30)">
+    <span class="material-symbols-outlined text-lg" style="font-variation-settings:'FILL' 1;">home</span>
+    <span x-text="$store.app.t('portal_back_dashboard')">Panele Dön</span>
+  </a>
+</div>
+
+{% endblock %}

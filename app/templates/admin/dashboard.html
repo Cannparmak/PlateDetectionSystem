@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}{{ t('admin_dashboard') }}{% endblock %}
 {% block content %}
 
 <!-- Stat Cards -->
@@ -14,7 +14,7 @@
   ] %}
   {% for icon, val, i18n_key, text_cls, bg_cls in cards %}
   <div class="bg-surface-container p-6 rounded-3xl ghost-border flex items-center gap-5 hover:bg-surface-container-high transition-colors group">
-    <div class="w-14 h-14 rounded-2xl {{ bg_cls }} flex items-center justify-center group-hover:scale-110 transition-transform">
+        <div class="w-14 h-14 rounded-2xl {{ bg_cls }} flex items-center justify-center group-hover:scale-110 transition-transform">
       <span class="material-symbols-outlined {{ text_cls }} text-3xl">{{ icon }}</span>
     </div>
     <div>
@@ -28,7 +28,7 @@
 <!-- Occupancy + Config -->
 <div class="grid grid-cols-12 gap-6">
   <div class="col-span-4 self-start bg-surface-container-low rounded-3xl p-6 ghost-border flex flex-col items-center text-center">
-    <span class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-4">Doluluk</span>
+    <span class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-4" x-text="$store.app.t('lbl_occupancy')">Doluluk</span>
     {% set pct = (stats.active_sessions / (config.total_capacity if config else 100) * 100) | round | int %}
     {% set dash = 264 %}
     {% set offset = dash - (dash * pct / 100) %}
@@ -45,9 +45,6 @@
       </div>
     </div>
     <p class="text-xs text-[#8c909f] mt-3">{{ stats.active_sessions }} / {{ config.total_capacity if config else 100 }}</p>
-    {% if config %}
-    <p class="text-xs text-[#8c909f] mt-1">{{ config.name }}</p>
-    {% endif %}
   </div>
 
   <!-- Recent Sessions -->
@@ -72,12 +69,12 @@
           <div class="text-right">
             <span class="text-[10px] font-bold px-3 py-1 rounded-full
                          {% if s.is_active %}bg-tertiary-container/10 text-tertiary{% else %}bg-[#33343b] text-[#8c909f]{% endif %}">
-              {% if s.is_active %}İÇERİDE{% else %}ÇIKTI{% endif %}
+              {% if s.is_active %}{{ t('portal_inside_badge') }}{% else %}{{ t('portal_exited_badge') }}{% endif %}
             </span>
           </div>
         </div>
         {% else %}
-        <div class="px-5 py-8 text-center text-[#8c909f] text-sm">Henüz kayıt yok.</div>
+        <div class="px-5 py-8 text-center text-[#8c909f] text-sm">{{ t('portal_no_entries') }}</div>
         {% endfor %}
       </div>
     </div>

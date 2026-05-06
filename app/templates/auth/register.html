@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" class="dark">
+<html lang="{{ lang }}" class="dark">
 <head>
   <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kayıt | CanPark</title>
@@ -8,12 +8,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary":"#adc6ff","surface-container":"#1e1f26","surface-container-low":"#191b22","on-surface":"#e2e2eb","outline-variant":"#424754","tertiary-container":"#00a572","error":"#ffb4ab"}}}}</script>
   <style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}.ghost-border{border:1px solid rgba(66,71,84,0.15);}.glow-active{box-shadow:0 0 20px rgba(77,142,255,0.30);}</style>
+  <script src="/static/js/app.js?v=6"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4" x-data x-init="$store.app.init()">
+  <div class="fixed top-4 right-4 flex items-center gap-2 z-50">
+    <button @click="$store.app.toggleLang()"
+            class="h-8 px-3 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+      <span class="text-xs font-bold text-[#c2c6d6] tracking-wider" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+    </button>
+    <button @click="$store.app.toggleTheme()"
+            class="w-8 h-8 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+      <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
+    </button>
+  </div>
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold text-primary tracking-tighter">CanPark</h1>
-      <p class="text-[#8c909f] text-sm mt-1">Müşteri Kayıt</p>
+      <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('portal_welcome')">Müşteri Kayıt</p>
     </div>
     <div class="bg-[#1e1f26] rounded-3xl p-8 ghost-border">
       {% if error %}
@@ -24,31 +36,31 @@
       <form method="post" action="/musteri/register" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Ad</label>
+            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('lbl_first_name')">Ad</label>
             <input type="text" name="first_name" required class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-0" placeholder="Ahmet"/>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Soyad</label>
+            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('lbl_last_name')">Soyad</label>
             <input type="text" name="last_name" required class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-0" placeholder="Yılmaz"/>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Telefon</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('lbl_phone')">Telefon</label>
           <input type="tel" name="phone" required class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none" placeholder="0532 000 00 00"/>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">E-posta (opsiyonel)</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2"><span x-text="$store.app.t('login_email')">E-posta</span> (<span x-text="$store.app.t('lbl_optional')">opsiyonel</span>)</label>
           <input type="email" name="email" class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none" placeholder="ahmet@email.com"/>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Şifre</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('login_password')">Şifre</label>
           <input type="password" name="password" required minlength="6" class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none" placeholder="••••••••"/>
         </div>
-        <button type="submit" class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all mt-2 glow-active">Kayıt Ol</button>
+        <button type="submit" class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all mt-2 glow-active" x-text="$store.app.t('btn_register')">Kayıt Ol</button>
       </form>
     </div>
     <p class="text-center text-[#8c909f] text-sm mt-6">
-      Zaten hesabınız var mı? <a href="/musteri/login" class="text-primary hover:underline">Giriş yapın</a>
+      <span x-text="$store.app.t('lbl_have_account')">Zaten hesabınız var mı?</span> <a href="/musteri/login" class="text-primary hover:underline" x-text="$store.app.t('lbl_sign_in')">Giriş yapın</a>
     </p>
   </div>
 </body>

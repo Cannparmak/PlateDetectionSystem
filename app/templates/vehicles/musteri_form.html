@@ -1,0 +1,86 @@
+{% extends "base_customer.html" %}
+{% block title %}{{ t('portal_add_vehicle') }}{% endblock %}
+{% block content %}
+
+<div class="max-w-lg mx-auto">
+  <div class="flex items-center gap-3 mb-2">
+    <a href="/musteri/dashboard" class="text-[#8c909f] hover:text-white transition-colors">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('portal_add_vehicle')">Araç Ekle</h1>
+      <p class="text-[#8c909f] text-sm" x-text="$store.app.t('portal_add_vehicle_desc')">Plakayı girin, sisteme kaydedilsin</p>
+    </div>
+  </div>
+
+  <div class="bg-[#1e1f26] rounded-3xl p-8 ghost-border mt-6">
+    {% if error %}
+    <div class="mb-5 p-4 bg-[#93000a]/20 rounded-2xl text-[#ffb4ab] text-sm flex items-center gap-2">
+      <span class="material-symbols-outlined text-base">error</span>{{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/musteri/vehicles/new" class="space-y-5">
+
+      <!-- Plaka -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('lbl_plate') + ' *'">Plaka *</label>
+        <input
+          type="text"
+          name="plate_display"
+          required
+          value="{{ form.plate_display or '' }}"
+          placeholder="34 ABC 1234"
+          oninput="this.value = this.value.toUpperCase()"
+          class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-[#adc6ff]/30 font-mono tracking-widest uppercase"
+        />
+        <p class="text-[10px] text-[#8c909f] mt-1.5" x-text="$store.app.t('portal_plate_format')">Türk plakası formatında girin (örn: 34 ABC 1234)</p>
+      </div>
+
+      <!-- Araç Tipi -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_vehicle_type')">Araç Tipi</label>
+        <select name="vehicle_type"
+                class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-[#adc6ff]/30">
+          <option value="otomobil" {% if form.vehicle_type == 'otomobil' or not form.vehicle_type %}selected{% endif %}>Otomobil</option>
+          <option value="motosiklet" {% if form.vehicle_type == 'motosiklet' %}selected{% endif %}>Motosiklet</option>
+          <option value="minibüs" {% if form.vehicle_type == 'minibüs' %}selected{% endif %}>Minibüs</option>
+          <option value="kamyonet" {% if form.vehicle_type == 'kamyonet' %}selected{% endif %}>Kamyonet</option>
+        </select>
+      </div>
+
+      <!-- Marka / Model -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_brand')">Marka</label>
+          <input type="text" name="brand" value="{{ form.brand or '' }}" placeholder="Toyota"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-[#adc6ff]/30"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_model')">Model</label>
+          <input type="text" name="model" value="{{ form.model or '' }}" placeholder="Corolla"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-[#adc6ff]/30"/>
+        </div>
+      </div>
+
+      <!-- Renk -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_color')">Renk</label>
+        <input type="text" name="color" value="{{ form.color or '' }}" placeholder="Beyaz"
+               class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-[#adc6ff]/30"/>
+      </div>
+
+      <button type="submit"
+              class="w-full h-12 bg-[#adc6ff] text-[#002e6a] font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all mt-2 flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-lg" style="font-variation-settings:'FILL' 1;">add_circle</span>
+        <span x-text="$store.app.t('portal_save_vehicle')">Aracı Kaydet</span>
+      </button>
+    </form>
+  </div>
+
+  <p class="text-center text-[#8c909f] text-sm mt-6">
+    <a href="/musteri/dashboard" class="text-[#adc6ff] hover:underline" x-text="$store.app.t('portal_skip_add_vehicle')">Şimdilik atla, sonra eklerim</a>
+  </p>
+</div>
+
+{% endblock %}

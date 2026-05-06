@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" class="dark">
+<html lang="{{ lang }}" class="dark">
 <head>
   <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Giriş | CanPark</title>
@@ -30,26 +30,26 @@
     *,*::before,*::after{transition:background-color 0.2s ease,color 0.15s ease;}
     .material-symbols-outlined{transition:none!important;}
   </style>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=6"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4" x-data x-init="$store.app.init()">
 
   <!-- Top-right controls -->
   <div class="fixed top-4 right-4 flex items-center gap-2">
-    <button @click="$store.app.toggleTheme()"
-            class="w-9 h-9 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
-      <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
-    </button>
     <button @click="$store.app.toggleLang()"
             class="h-9 px-3 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
       <span class="text-xs font-bold text-[#c2c6d6]" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+    </button>
+    <button @click="$store.app.toggleTheme()"
+            class="w-9 h-9 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+      <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
     </button>
   </div>
 
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold text-primary tracking-tighter">CanPark</h1>
-      <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.isEN ? 'Staff Login' : 'Personel Girişi'">Personel Girişi</p>
+      <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('login_staff')">Personel Girişi</p>
     </div>
 
     <div class="bg-[#1e1f26] rounded-3xl p-8 ghost-border">
@@ -93,11 +93,11 @@
     <div class="mt-6 flex flex-col items-center gap-2 text-sm text-[#8c909f]">
       <a href="/musteri/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
         <span class="material-symbols-outlined text-base">person</span>
-        Müşteri girişi
+        <span x-text="$store.app.t('login_customer_cta')">Müşteri girişi</span>
       </a>
       <a href="/plaka-sorgula" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
         <span class="material-symbols-outlined text-base">search</span>
-        Plaka sorgula / borç öde
+        <span x-text="$store.app.t('login_plate_cta')">Plaka sorgula / borç öde</span>
       </a>
     </div>
   </div>
