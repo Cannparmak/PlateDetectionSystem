@@ -1,42 +1,58 @@
 <!DOCTYPE html>
-<html lang="tr" class="dark">
+<html lang="{{ lang }}" class="dark">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CanPark — Otopark Yönetim Sistemi</title>
+  <script>(function(){var t=localStorage.getItem("theme")||"dark";var h=document.documentElement;h.classList.remove("dark","light");h.classList.add(t);})();</script>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script>
     tailwind.config = { darkMode:"class", theme:{ extend:{ colors:{
-      "primary":"#adc6ff","primary-container":"#4d8eff","surface":"#111319",
-      "surface-container":"#1e1f26","surface-container-low":"#191b22",
-      "surface-container-high":"#282a30","surface-container-highest":"#33343b",
-      "surface-container-lowest":"#0c0e14","on-surface":"#e2e2eb",
-      "on-surface-variant":"#c2c6d6","outline-variant":"#424754","outline":"#8c909f",
+      "primary":"var(--accent)","on-primary":"var(--accent-on)",
+      "surface-container":"var(--bg-card)","surface-container-low":"var(--bg-sidebar)",
+      "surface-container-lowest":"var(--bg-deep)","on-surface":"var(--text-primary)",
+      "on-surface-variant":"var(--text-muted)","outline":"var(--text-subtle)",
       "tertiary":"#4edea3","tertiary-container":"#00a572","error":"#ffb4ab",
       "error-container":"#93000a",
     }}}}
   </script>
   <style>
-    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;}
-    body{background-color:#111319;color:#e2e2eb;font-family:'Inter',sans-serif;}
-    html:not(.dark) body{background-color:#f0f3f8;color:#1a1c23;}
-    html:not(.dark) .bg-\[#191b22\]{background-color:#eef0f8!important;}
-    html:not(.dark) .bg-\[#1e1f26\]{background-color:#ffffff!important;box-shadow:0 1px 4px rgba(28,33,40,0.08);}
-    html:not(.dark) .bg-\[#0c0e14\]{background-color:#e6eaf2!important;}
-    html:not(.dark) .text-\[#8c909f\]{color:#6b6f82!important;}
-    html:not(.dark) .text-\[#e2e2eb\]{color:#1a1c23!important;}
-    html:not(.dark) .text-\[#c2c6d6\]{color:#3a3d52!important;}
-    .ghost-border{border:1px solid rgba(66,71,84,0.15);}
-    html:not(.dark) .ghost-border{border:1px solid rgba(28,33,40,0.10);}
-    .card-hover:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(77,142,255,0.12);}
-    html:not(.dark) .card-hover:hover{box-shadow:0 8px 24px rgba(26,127,55,0.12);}
+    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;transition:none!important;}
     *,*::before,*::after{transition:background-color 0.2s ease,color 0.15s ease,transform 0.15s ease,box-shadow 0.15s ease;}
-    .material-symbols-outlined{transition:none!important;}
+
+    html,html.dark{
+      --bg-base:#111319;--bg-sidebar:#191b22;--bg-card:#1e1f26;--bg-deep:#0c0e14;
+      --text-primary:#e2e2eb;--text-muted:#c2c6d6;--text-subtle:#8c909f;
+      --accent:#adc6ff;--accent-on:#002e6a;--divider:rgba(66,71,84,0.15);
+    }
+    html.light{
+      --bg-base:#e8ecf1;--bg-sidebar:#f0f3f7;--bg-card:#f6f8fb;--bg-deep:#dde3ea;
+      --text-primary:#1c2128;--text-muted:#424a57;--text-subtle:#656d76;
+      --accent:#1a7f37;--accent-on:#ffffff;--divider:rgba(28,33,40,0.10);
+    }
+
+    body{background-color:var(--bg-base);color:var(--text-primary);font-family:'Inter',sans-serif;}
+
+    html.light .bg-\[\#191b22\]{background-color:var(--bg-sidebar)!important;}
+    html.light .bg-\[\#1e1f26\]{background-color:var(--bg-card)!important;box-shadow:0 1px 4px rgba(28,33,40,0.08);}
+    html.light .bg-\[\#0c0e14\]{background-color:var(--bg-deep)!important;}
+    html.light .text-\[\#8c909f\]{color:var(--text-subtle)!important;}
+    html.light .text-\[\#e2e2eb\]{color:var(--text-primary)!important;}
+    html.light .text-\[\#c2c6d6\]{color:var(--text-muted)!important;}
+    html.light .text-white{color:var(--text-primary)!important;}
+    html.light .text-\[\#adc6ff\]{color:var(--accent)!important;}
+    html.light .bg-\[\#adc6ff\]{background-color:var(--accent)!important;color:var(--accent-on)!important;}
+    html.light .text-\[\#002e6a\]{color:var(--accent-on)!important;}
+
+    .ghost-border{border:1px solid var(--divider);}
+    .text-primary{color:var(--accent)!important;}
+    .card-hover:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(77,142,255,0.12);}
+    html.light .card-hover:hover{box-shadow:0 8px 24px rgba(26,127,55,0.12);}
   </style>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=6"></script>
 </head>
 <body class="min-h-screen flex flex-col" x-data x-init="$store.app.init()">
 
@@ -44,6 +60,10 @@
   <header class="bg-[#191b22] h-14 flex items-center justify-between px-6 ghost-border sticky top-0 z-40">
     <span class="text-lg font-bold text-[#adc6ff] tracking-tighter">CanPark</span>
     <div class="flex items-center gap-2">
+      <button @click="$store.app.toggleLang()"
+              class="h-8 px-3 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
+        <span class="text-xs font-bold text-[#c2c6d6]" x-text="$store.app.isEN ? 'TR' : 'EN'">EN</span>
+      </button>
       <button @click="$store.app.toggleTheme()"
               class="w-8 h-8 rounded-full bg-[#1e1f26] ghost-border flex items-center justify-center hover:opacity-80 transition-opacity">
         <span class="material-symbols-outlined text-[#c2c6d6] text-base" x-text="$store.app.isDark ? 'light_mode' : 'dark_mode'">light_mode</span>
@@ -56,7 +76,7 @@
 
     <div class="text-center space-y-3 max-w-md">
       <h1 class="text-4xl font-bold text-[#adc6ff] tracking-tighter">CanPark</h1>
-      <p class="text-[#8c909f]">Otopark Yönetim Sistemi</p>
+      <p class="text-[#8c909f]" x-text="$store.app.t('landing_subtitle')">Otopark Yönetim Sistemi</p>
     </div>
 
     <!-- 3 cards -->
@@ -70,11 +90,11 @@
           <span class="material-symbols-outlined text-3xl text-[#adc6ff]" style="font-variation-settings:'FILL' 1;">admin_panel_settings</span>
         </div>
         <div>
-          <p class="text-base font-bold text-[#e2e2eb]">Admin Girişi</p>
-          <p class="text-xs text-[#8c909f] mt-1">Yönetici paneline eriş</p>
+          <p class="text-base font-bold text-[#e2e2eb]" x-text="$store.app.t('landing_admin')">Admin Girişi</p>
+          <p class="text-xs text-[#8c909f] mt-1" x-text="$store.app.t('landing_admin_desc')">Yönetici paneline eriş</p>
         </div>
         <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold text-[#002e6a]"
-              style="background:#adc6ff">
+              style="background:#adc6ff" x-text="$store.app.t('landing_sign_in')">
           Giriş Yap
         </span>
       </a>
@@ -87,11 +107,12 @@
           <span class="material-symbols-outlined text-3xl text-[#4edea3]" style="font-variation-settings:'FILL' 1;">person</span>
         </div>
         <div>
-          <p class="text-base font-bold text-[#e2e2eb]">Müşteri Girişi</p>
-          <p class="text-xs text-[#8c909f] mt-1">Abonelik ve araç bilgilerim</p>
+          <p class="text-base font-bold text-[#e2e2eb]" x-text="$store.app.t('landing_customer')">Müşteri Girişi</p>
+          <p class="text-xs text-[#8c909f] mt-1" x-text="$store.app.t('landing_customer_desc')">Abonelik ve araç bilgilerim</p>
         </div>
         <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold"
-              style="background:rgba(0,165,114,0.18);color:#4edea3;border:1px solid rgba(0,165,114,0.3)">
+              style="background:rgba(0,165,114,0.18);color:#4edea3;border:1px solid rgba(0,165,114,0.3)"
+              x-text="$store.app.t('landing_sign_in')">
           Giriş Yap
         </span>
       </a>
@@ -104,18 +125,19 @@
           <span class="material-symbols-outlined text-3xl text-yellow-400" style="font-variation-settings:'FILL' 1;">search</span>
         </div>
         <div>
-          <p class="text-base font-bold text-[#e2e2eb]">Plaka Sorgula</p>
-          <p class="text-xs text-[#8c909f] mt-1">Park borç durumunu öğren</p>
+          <p class="text-base font-bold text-[#e2e2eb]" x-text="$store.app.t('landing_plate')">Plaka Sorgula</p>
+          <p class="text-xs text-[#8c909f] mt-1" x-text="$store.app.t('landing_plate_desc')">Park borç durumunu öğren</p>
         </div>
         <span class="w-full h-10 rounded-xl flex items-center justify-center text-xs font-semibold"
-              style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">
+              style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)"
+              x-text="$store.app.t('landing_query')">
           Sorgula
         </span>
       </a>
 
     </div>
 
-    <p class="text-xs text-[#8c909f]">Giriş gerektirmez — plaka numaranızı girerek borç durumunuzu öğrenebilirsiniz.</p>
+    <p class="text-xs text-[#8c909f]" x-text="$store.app.t('landing_guest_note')">Giriş gerektirmez — plaka numaranızı girerek borç durumunuzu öğrenebilirsiniz.</p>
 
   </main>
 

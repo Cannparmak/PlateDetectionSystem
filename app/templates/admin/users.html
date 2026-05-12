@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Kullanıcı Yönetimi{% endblock %}
+{% block title %}{{ t('admin_users') }}{% endblock %}
 {% block content %}
 
 <div class="flex justify-between items-center">
   <div>
-    <h1 class="text-2xl font-bold text-white">Kullanıcılar</h1>
-    <p class="text-[#8c909f] text-sm mt-1">Sistem personel hesapları</p>
+    <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('admin_users')">Kullanıcılar</h1>
+    <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('admin_users_sub')">Sistem personel hesapları</p>
   </div>
 </div>
 
@@ -15,10 +15,10 @@
   <div class="col-span-7">
     <div class="bg-surface-container-low rounded-3xl overflow-hidden ghost-border">
       <div class="grid grid-cols-4 px-6 py-3 bg-[#0c0e14] text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
-        <div>Kullanıcı</div>
-        <div>E-posta</div>
-        <div>Rol</div>
-        <div class="text-right">Durum</div>
+        <div x-text="$store.app.t('admin_customer')">Kullanıcı</div>
+        <div x-text="$store.app.t('admin_email')">E-posta</div>
+        <div x-text="$store.app.t('admin_role')">Rol</div>
+        <div class="text-right" x-text="$store.app.t('admin_status')">Durum</div>
       </div>
       <div class="divide-y divide-outline-variant/10">
         {% for u in users %}
@@ -40,16 +40,16 @@
               <button type="submit"
                       class="text-[10px] font-bold px-2.5 py-1 rounded-full transition-all
                              {% if u.is_active %}bg-error-container/10 text-error hover:bg-error-container/20{% else %}bg-tertiary-container/10 text-tertiary hover:bg-tertiary-container/20{% endif %}">
-                {{ 'Devre Dışı' if u.is_active else 'Aktif Et' }}
+                {{ t('admin_disable') if u.is_active else t('admin_activate') }}
               </button>
             </form>
             {% else %}
-            <span class="text-[10px] text-[#8c909f]">Siz</span>
+            <span class="text-[10px] text-[#8c909f]" x-text="$store.app.t('admin_you')">Siz</span>
             {% endif %}
           </div>
         </div>
         {% else %}
-        <div class="px-6 py-12 text-center text-[#8c909f] text-sm">Kullanıcı yok.</div>
+        <div class="px-6 py-12 text-center text-[#8c909f] text-sm" x-text="$store.app.t('admin_no_users')">Kullanıcı yok.</div>
         {% endfor %}
       </div>
     </div>
@@ -60,31 +60,31 @@
     <div class="bg-surface-container rounded-3xl p-6 ghost-border">
       <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-2">
         <span class="material-symbols-outlined text-primary text-base">person_add</span>
-        Yeni Kullanıcı
+        <span x-text="$store.app.t('admin_new_user')">Yeni Kullanıcı</span>
       </h3>
       <form method="post" action="/admin/users/new" class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5">Ad Soyad</label>
+            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_full_name')">Ad Soyad</label>
             <input type="text" name="full_name" required
                    class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                    placeholder="Ahmet Yılmaz"/>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5">Kullanıcı Adı</label>
+            <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_username')">Kullanıcı Adı</label>
             <input type="text" name="username" required
                    class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                    placeholder="ahmet"/>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5">E-posta</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_email')">E-posta</label>
           <input type="email" name="email" required
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                  placeholder="ahmet@otoparkpro.com"/>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5">Rol</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_role')">Rol</label>
           <select name="role" required
                   class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none">
             <option value="kasiyer">Kasiyer</option>
@@ -92,14 +92,14 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5">Şifre</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_password')">Şifre</label>
           <input type="password" name="password" required minlength="6"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                  placeholder="••••••••"/>
         </div>
         <button type="submit"
                 class="w-full h-11 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all">
-          Kullanıcı Oluştur
+          <span x-text="$store.app.t('admin_create_user')">Kullanıcı Oluştur</span>
         </button>
       </form>
     </div>

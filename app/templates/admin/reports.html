@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Raporlar{% endblock %}
+{% block title %}{{ t('admin_reports') }}{% endblock %}
 {% block content %}
 
 <div>
-  <h1 class="text-2xl font-bold text-white">Raporlar</h1>
-  <p class="text-[#8c909f] text-sm mt-1">Son 7 günün özeti</p>
+  <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('admin_reports')">Raporlar</h1>
+  <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('admin_reports_sub')">Son 7 günün özeti</p>
 </div>
 
 <div class="grid grid-cols-12 gap-6">
 
   <!-- Daily Entries Chart -->
   <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border">
-    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6">Günlük Giriş Sayısı</h3>
+    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('admin_daily_entries')">Günlük Giriş Sayısı</h3>
     {% set max_count = daily_entries | map(attribute='count') | max if daily_entries else 1 %}
     {% set max_count = max_count if max_count > 0 else 1 %}
     <div class="flex items-end gap-3 h-48">
@@ -27,14 +27,14 @@
         <span class="text-[10px] text-[#8c909f]">{{ day.date }}</span>
       </div>
       {% else %}
-      <div class="col-span-7 text-[#8c909f] text-sm py-10 text-center w-full">Veri yok.</div>
+      <div class="col-span-7 text-[#8c909f] text-sm py-10 text-center w-full" x-text="$store.app.t('admin_daily_no_data')">Veri yok.</div>
       {% endfor %}
     </div>
   </div>
 
   <!-- Plan Distribution -->
   <div class="col-span-4 bg-surface-container rounded-3xl p-6 ghost-border">
-    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6">Aktif Plan Dağılımı</h3>
+    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('admin_plan_dist')">Aktif Plan Dağılımı</h3>
     {% set total_subs = plan_stats | sum(attribute='count') %}
     <div class="space-y-4">
       {% for ps in plan_stats %}
@@ -52,12 +52,12 @@
         </div>
       </div>
       {% else %}
-      <p class="text-[#8c909f] text-sm py-8 text-center">Aktif abonelik yok.</p>
+      <p class="text-[#8c909f] text-sm py-8 text-center" x-text="$store.app.t('admin_no_active_subs')">Aktif abonelik yok.</p>
       {% endfor %}
     </div>
     {% if total_subs > 0 %}
     <div class="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
-      <span class="text-xs text-[#8c909f]">Toplam</span>
+      <span class="text-xs text-[#8c909f]" x-text="$store.app.t('admin_total')">Toplam</span>
       <span class="text-lg font-bold text-white">{{ total_subs }}</span>
     </div>
     {% endif %}
@@ -67,22 +67,22 @@
   <div class="col-span-12 grid grid-cols-4 gap-4">
     {% set totals = daily_entries | sum(attribute='count') %}
     <div class="bg-surface-container-low rounded-3xl p-5 ghost-border">
-      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2">7 Gün Toplam</p>
+      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2" x-text="$store.app.t('admin_7day_total')">7 Gün Toplam</p>
       <p class="text-3xl font-bold text-white">{{ totals }}</p>
-      <p class="text-xs text-[#8c909f] mt-1">giriş</p>
+      <p class="text-xs text-[#8c909f] mt-1" x-text="$store.app.t('ses_entry')">giriş</p>
     </div>
     <div class="bg-surface-container-low rounded-3xl p-5 ghost-border">
-      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2">Günlük Ortalama</p>
+      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2" x-text="$store.app.t('admin_daily_avg')">Günlük Ortalama</p>
       <p class="text-3xl font-bold text-white">{{ (totals / 7) | round(1) }}</p>
-      <p class="text-xs text-[#8c909f] mt-1">giriş/gün</p>
+      <p class="text-xs text-[#8c909f] mt-1"><span x-text="$store.app.t('ses_entry')">{{ t('ses_entry') }}</span>/<span x-text="$store.app.t('admin_daily_avg')">{{ t('admin_daily_avg') }}</span></p>
     </div>
     <div class="bg-surface-container-low rounded-3xl p-5 ghost-border">
-      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2">Aktif Abonelik</p>
+      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2" x-text="$store.app.t('admin_active_sub')">Aktif Abonelik</p>
       <p class="text-3xl font-bold text-white">{{ total_subs }}</p>
-      <p class="text-xs text-[#8c909f] mt-1">toplam</p>
+      <p class="text-xs text-[#8c909f] mt-1" x-text="$store.app.t('admin_total')">toplam</p>
     </div>
     <div class="bg-surface-container-low rounded-3xl p-5 ghost-border">
-      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2">En Yoğun Gün</p>
+      <p class="text-[10px] font-bold text-[#8c909f] uppercase tracking-widest mb-2" x-text="$store.app.t('admin_busiest_day')">En Yoğun Gün</p>
       {% set max_day = daily_entries | max(attribute='count') if daily_entries else None %}
       <p class="text-3xl font-bold text-white">{{ max_day.count if max_day else 0 }}</p>
       <p class="text-xs text-[#8c909f] mt-1">{{ max_day.date if max_day else '—' }}</p>

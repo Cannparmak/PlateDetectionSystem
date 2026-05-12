@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Araç Düzenle' if vehicle else 'Araç Ekle' }}{% endblock %}
+{% block title %}{{ t('veh_edit') if vehicle else t('veh_new') }}{% endblock %}
 {% block content %}
 
 <div class="flex items-center gap-3 mb-2">
   <a href="{{ '/customers/' + vehicle.customer_id|string if vehicle else '/vehicles' }}" style="color:var(--text-subtle)" class="hover:text-white transition-colors">
     <span class="material-symbols-outlined text-xl">arrow_back</span>
   </a>
-  <h1 class="text-2xl font-bold" style="color:var(--text-primary)">{{ 'Araç Düzenle' if vehicle else 'Araç Ekle' }}</h1>
+  <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('{{ 'veh_edit' if vehicle else 'veh_new' }}')">{{ 'Araç Düzenle' if vehicle else 'Araç Ekle' }}</h1>
 </div>
-<p class="text-sm ml-9" style="color:var(--text-subtle)">{{ vehicle.plate_display + ' · ' + vehicle.customer.full_name if vehicle else 'Müşteriye araç kaydı oluştur' }}</p>
+<p class="text-sm ml-9" style="color:var(--text-subtle)">{{ vehicle.plate_display + ' · ' + vehicle.customer.full_name if vehicle else t('portal_add_vehicle_desc') }}</p>
 
 <div class="max-w-2xl">
   {% if error %}
@@ -20,15 +20,15 @@
   <form method="post" action="{{ '/vehicles/' + vehicle.id|string + '/edit' if vehicle else '/vehicles/new' }}" class="space-y-5">
 
     <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Araç Bilgileri</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest" x-text="$store.app.t('veh_title')">Araç Bilgileri</h3>
 
       <!-- Müşteri seçimi — düzenlemede değiştirilemez -->
       {% if not vehicle %}
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Müşteri *</label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('cust_title') + ' *'">Müşteri *</label>
         <select name="customer_id" required
                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none">
-          <option value="">Müşteri seçin...</option>
+          <option value="" x-text="$store.app.t('cust_title') + ' seçin...'">Müşteri seçin...</option>
           {% for c in customers %}
           <option value="{{ c.id }}" {% if selected_customer_id == c.id %}selected{% endif %}>
             {{ c.full_name }}{% if c.phone %} — {{ c.phone }}{% endif %}
@@ -40,7 +40,7 @@
       <div class="p-3 rounded-xl ghost-border bg-[#0c0e14] flex items-center gap-3">
         <span class="material-symbols-outlined text-primary text-base">person</span>
         <div>
-          <p class="text-xs text-[#8c909f]">Müşteri</p>
+          <p class="text-xs text-[#8c909f]" x-text="$store.app.t('cust_title')">Müşteri</p>
           <p class="text-sm font-semibold text-white">{{ vehicle.customer.full_name if vehicle.customer else '—' }}</p>
         </div>
       </div>
@@ -48,19 +48,19 @@
 
       <!-- Plaka -->
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Plaka *</label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('veh_plate') + ' *'">Plaka *</label>
         <input type="text" name="plate_display" required
                value="{{ vehicle.plate_display if vehicle else '' }}"
                class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 uppercase font-mono tracking-widest"
                placeholder="34 ABC 1234"
                oninput="this.value = this.value.toUpperCase()"/>
-        <p class="text-xs text-[#8c909f] mt-1.5">Türk plakası: 34ABC1234 — Avrupa formatları da desteklenir.</p>
+        <p class="text-xs text-[#8c909f] mt-1.5" x-text="$store.app.t('portal_plate_format')">Türk plakası: 34ABC1234 — Avrupa formatları da desteklenir.</p>
       </div>
 
       <!-- Araç türü -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Araç Türü</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('veh_type')">Araç Türü</label>
           <select name="vehicle_type"
                   class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none">
             {% set types = ['otomobil', 'suv', 'pickup', 'minivan', 'motorsiklet', 'kamyonet', 'diğer'] %}
@@ -70,7 +70,7 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Renk</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_color')">Renk</label>
           <input type="text" name="color"
                  value="{{ vehicle.color if vehicle else '' }}"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -81,14 +81,14 @@
       <!-- Marka/Model -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Marka</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_brand')">Marka</label>
           <input type="text" name="brand"
                  value="{{ vehicle.brand if vehicle else '' }}"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                  placeholder="Toyota"/>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Model</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2" x-text="$store.app.t('portal_model')">Model</label>
           <input type="text" name="model"
                  value="{{ vehicle.model if vehicle else '' }}"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -100,11 +100,11 @@
     <div class="flex gap-3">
       <a href="/vehicles"
          class="flex-1 h-12 flex items-center justify-center rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
-        İptal
+        {{ t('btn_cancel') }}
       </a>
       <button type="submit"
               class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
-        {{ 'Güncelle' if vehicle else 'Araç Kaydet' }}
+        {{ t('btn_update') if vehicle else t('portal_save_vehicle') }}
       </button>
     </div>
   </form>

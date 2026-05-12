@@ -4,18 +4,18 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_staff_user, require_admin
+from app.i18n import get_templates
 from app.models.customer import Customer
 from app.models.vehicle import Vehicle
 from app.models.user import User
 from src.postprocess.text_cleaner import PlateCleaner
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 _cleaner = PlateCleaner()
 
 
@@ -23,9 +23,11 @@ _cleaner = PlateCleaner()
 async def vehicle_list(
     request: Request,
     search: str = "",
+    page: int = 1,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
+    per_page = 10
     q = db.query(Vehicle).options(joinedload(Vehicle.customer))
     if search:
         plate_search = _cleaner.clean(search)
@@ -33,10 +35,16 @@ async def vehicle_list(
             Vehicle.plate_number.ilike(f"%{plate_search}%") |
             Vehicle.plate_display.ilike(f"%{search}%")
         )
-    vehicles = q.order_by(Vehicle.created_at.desc()).all()
+    total = q.count()
+    vehicles = q.order_by(Vehicle.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
     return templates.TemplateResponse(request, "vehicles/list.html", {
         "user": user,
-        "vehicles": vehicles, "search": search,
+        "vehicles": vehicles,
+        "search": search,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
     })
 
 

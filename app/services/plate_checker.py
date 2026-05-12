@@ -17,6 +17,7 @@ Aksiyon kodları:
     ALREADY_INSIDE    — Araç zaten içeride
     NOT_INSIDE        — Çıkış isteği ama araç içeride değil
     DENY_DEBT         — Borç eşiği aşıldı, giriş reddedildi
+    DENY_EXIT_DEBT    — Borç eşiği aşıldı, çıkış reddedildi
     DENY              — Genel red (beklenmedik durum)
 """
 
@@ -264,11 +265,37 @@ class PlateChecker:
                 fuzzy_original=fuzzy_original,
             )
 
+        is_subscriber = active_session.subscription_id is not None
+
+        # Abone değilse mevcut oturum ücreti dahil toplam borcu kontrol et
+        if not is_subscriber:
+            existing_debt    = self._get_total_debt(vehicle.id)
+            threshold        = self._get_debt_threshold()
+            current_duration = int((datetime.utcnow() - active_session.entry_time).total_seconds() / 60)
+            current_fee      = self._fee_calc.calculate(current_duration)
+            total_with_fee   = round(existing_debt + current_fee, 2)
+
+            if total_with_fee >= threshold:
+                return CheckResult(
+                    plate_text=plate,
+                    vehicle_found=True,
+                    subscription_active=False,
+                    action="DENY_EXIT_DEBT",
+                    message=(
+                        f"{plate} — Toplam borcunuz (TL{total_with_fee:.0f}) esik degeri "
+                        f"(TL{threshold:.0f}) asiyor. Lutfen kasa ile iletisime gecin."
+                    ),
+                    gate_signal=0,
+                    user_type="anonymous_guest" if vehicle.is_anonymous else "guest",
+                    customer_name=customer_name,
+                    total_debt=total_with_fee,
+                    fuzzy_match=fuzzy_match,
+                    fuzzy_original=fuzzy_original,
+                )
+
         # Session kapat — önce süreyi hesapla
         active_session.close(confidence=confidence)
         duration = active_session.duration_minutes or 0
-
-        is_subscriber = active_session.subscription_id is not None
 
         if is_subscriber:
             # ── ABONE ÇIKIŞI — ücretsiz ──────────────────────────────
@@ -301,7 +328,7 @@ class PlateChecker:
         bracket_name = self._fee_calc.get_bracket_name(duration)
 
         active_session.fee_amount = fee
-        active_session.is_paid    = False
+        active_session.is_paid    = fee == 0.0  # 0 TL ücreti borç olarak kaydetme
         self._db.flush()
 
         total_debt = self._get_total_debt(vehicle.id)

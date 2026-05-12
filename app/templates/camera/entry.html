@@ -9,8 +9,8 @@
     <div class="flex items-center gap-3">
       <div class="w-3 h-3 rounded-full bg-tertiary-container success-glow animate-pulse"></div>
       <div>
-        <h1 class="text-2xl font-bold" style="color:var(--text-primary)">{{ t('cam_title') }} {{ t('cam_entry') }}</h1>
-        <p class="text-sm mt-0.5" style="color:var(--text-subtle)">{{ t('cam_entry') }} kapısı — plaka tespiti aktif</p>
+        <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('cam_title') + ' ' + $store.app.t('cam_entry')">Canlı Kamera Giriş</h1>
+        <p class="text-sm mt-0.5" style="color:var(--text-subtle)" x-text="$store.app.t('cam_entry_subtitle')">Giriş kapısı — plaka tespiti aktif</p>
       </div>
     </div>
     <!-- Occupancy -->
@@ -25,7 +25,7 @@
         <span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style="color:var(--accent)" x-text="occupancyPct + '%'"></span>
       </div>
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">{{ t('cam_occupancy') }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)" x-text="$store.app.t('cam_occupancy')">Doluluk</p>
         <p class="text-sm font-bold" style="color:var(--text-primary)">
           <span x-text="occupancyActive"></span> / <span x-text="occupancyCapacity"></span>
         </p>
@@ -41,18 +41,22 @@
 
       <!-- Video feed -->
       <div class="relative rounded-2xl overflow-hidden ghost-border" style="aspect-ratio:16/9; background:var(--bg-deep)">
-        <video id="cam-video" autoplay muted playsinline class="hidden"></video>
-        <canvas id="cam-canvas" class="hidden"></canvas>
-        <img id="cam-img" class="absolute inset-0 w-full h-full object-cover" style="display:none" alt="Giriş"/>
+        <video id="cam-video" autoplay muted playsinline
+               class="absolute inset-0 w-full h-full object-cover" style="display:none"></video>
+        <canvas id="cam-overlay" width="640" height="360"
+                class="absolute inset-0 w-full h-full"
+                style="display:none; pointer-events:none; z-index:5"></canvas>
+        <canvas id="cam-canvas" class="hidden" width="640" height="360"></canvas>
 
         <!-- Placeholder -->
         <div id="cam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-4">
           <span class="material-symbols-outlined text-6xl" style="color:var(--bg-chip)">videocam_off</span>
-          <p class="text-sm" style="color:var(--text-subtle)">{{ t('admin_start_entry') }}</p>
+          <p class="text-sm" style="color:var(--text-subtle)" x-text="$store.app.t('admin_start_entry')">Giriş kamerasını başlatın</p>
           <button @click="startCamera()"
                   class="px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
                   style="background:var(--accent);color:var(--accent-on)">
-            <span class="material-symbols-outlined text-base">videocam</span> {{ t('cam_start') }}
+            <span class="material-symbols-outlined text-base">videocam</span>
+            <span x-text="$store.app.t('cam_start')">Başlat</span>
           </button>
         </div>
 
@@ -81,8 +85,8 @@
            class="p-3 rounded-xl ghost-border flex flex-col gap-2"
            style="background:var(--bg-card)">
         <div class="flex items-center gap-4">
-          <span class="material-symbols-outlined text-sm" style="color:var(--accent)">settings_input_component</span>
-          <label class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-subtle)">{{ t('cam_source') }}</label>
+          <span class="material-symbols-outlined text-sm" style="color:var(--accent)">tune</span>
+          <label class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('cam_source')">Kamera Kaynağı</label>
           <select x-model="cam.deviceId" @change="restartCamera()"
                   class="flex-1 rounded-lg px-3 py-1.5 text-sm ghost-border" style="background:var(--bg-deep);color:var(--text-primary)">
             <template x-for="c in availableCameras" :key="c.deviceId">
@@ -90,8 +94,8 @@
             </template>
           </select>
         </div>
-        <p class="text-[10px] pl-7" style="color:var(--text-subtle)">
-          OBS Studio → Araçlar → VirtualCam → {{ t('cam_start') }} — ardından bu listeden seçin
+        <p class="text-[10px] pl-7" style="color:var(--text-subtle)" x-text="$store.app.t('cam_obs_hint')">
+          OBS Studio → Araçlar → VirtualCam → Başlat — ardından bu listeden seçin
         </p>
       </div>
 
@@ -177,7 +181,7 @@
 
       <!-- Detected plate card (live stream info) -->
       <div class="rounded-2xl p-5 ghost-border flex flex-col gap-3" style="background:var(--bg-card)">
-        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">{{ t('cam_live_detection') }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)" x-text="$store.app.t('cam_live_detection')">{{ t('cam_live_detection') }}</p>
         <p class="plate-font font-bold text-3xl" style="color:var(--text-primary)"
            x-text="cam.detection ? cam.detection.plate_text : '— — —'"></p>
 
@@ -330,17 +334,18 @@ function singleCamera(side, wsPath, apiPath) {
     occupancyActive: 0,
     occupancyCapacity: 100,
     insideVehicles: [],
+    t(key) { return Alpine.store('app').t(key); },
 
     cam: {
       active: false, processing: false,
-      ws: null, stream: null, interval: null,
+      ws: null, stream: null,
       detection: null, result: null,
       fps: 0, ms: 0, deviceId: '',
       plateHistory: [],
       lastTriggeredPlate: '',
-      plateFirstSeenAt: 0,     // misafir 5s kuralı: plaka ilk görüldüğü zaman
-      currentTrackedPlate: '', // hangi plakayı sayıyoruz
-      guestElapsed: 0,         // geçen ms (0-5000) — UI countdown için
+      plateFirstSeenAt: 0,
+      currentTrackedPlate: '',
+      guestElapsed: 0,
     },
 
     init() {
@@ -370,45 +375,79 @@ function singleCamera(side, wsPath, apiPath) {
       } catch (_) {}
     },
 
+    // ── Sunucuya tek frame gönder (ack-based: yanıt gelince tekrar çağrılır)
+    _sendFrame() {
+      if (!this.cam.active || this.cam.ws?.readyState !== WebSocket.OPEN) return;
+      const video  = document.getElementById('cam-video');
+      const canvas = document.getElementById('cam-canvas');
+      canvas.getContext('2d').drawImage(video, 0, 0, 640, 360);
+      const frame = canvas.toDataURL('image/jpeg', 0.60).split(',')[1];
+      this.cam.ws.send(JSON.stringify({ action: 'stream', frame }));
+    },
+
+    // ── YOLO bbox'larını overlay canvas'a çiz (video'dan bağımsız, 60fps video devam eder)
+    _drawBboxes(detections) {
+      const overlay = document.getElementById('cam-overlay');
+      if (!overlay) return;
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0, 0, 640, 360);
+      for (const det of detections) {
+        if (!det.bbox) continue;
+        const [x1, y1, x2, y2] = det.bbox;
+        const color = det.confirmed ? '#00e589' : '#fbbf24';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        if (det.plate_text) {
+          const label = det.plate_text + ' ' + Math.round((det.confidence_det || 0) * 100) + '%';
+          const tw = ctx.measureText(label).width + 8;
+          ctx.fillStyle = 'rgba(0,0,0,0.72)';
+          ctx.fillRect(x1, y2 + 2, Math.min(tw, x2 - x1 + 40), 18);
+          ctx.fillStyle = color;
+          ctx.font = 'bold 12px monospace';
+          ctx.fillText(label, x1 + 4, y2 + 15);
+        }
+      }
+    },
+
     connectWS() {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       this.cam.ws = new WebSocket(`${proto}://${location.host}${this.wsPath}`);
+
+      // WS (yeniden) bağlandığında kamera aktifse frame zincirini başlat
+      this.cam.ws.addEventListener('open', () => {
+        if (this.cam.active) this._sendFrame();
+      });
+
       this.cam.ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type !== 'result') return;
-        const img = document.getElementById('cam-img');
-        if (data.annotated_frame) {
-          img.src = 'data:image/jpeg;base64,' + data.annotated_frame;
-          img.style.display = 'block';
-        }
+
         this.cam.fps = data.fps || 0;
         this.cam.ms  = data.processing_ms || 0;
+
+        // YOLO bbox'larını overlay canvas'a çiz (video akışı server'dan bağımsız)
+        this._drawBboxes(data.detections || []);
 
         if (data.detections && data.detections.length > 0) {
           const best = data.detections.reduce((a, b) => a.confidence_det > b.confidence_det ? a : b);
 
-          // ── Temporal voting ──────────────────────────────
           if (best.plate_text) {
             this.cam.plateHistory.push(best.plate_text);
             if (this.cam.plateHistory.length > 5) this.cam.plateHistory.shift();
           }
           const votes = this.cam.plateHistory.filter(p => p === best.plate_text).length;
           best.confirmed = votes >= 2;
-          // ─────────────────────────────────────────────────
 
           this.cam.detection = best;
 
-          // ── Plaka takibi — misafir 5s kuralı ─────────────
           if (best.plate_text && best.plate_text !== this.cam.currentTrackedPlate) {
             this.cam.plateFirstSeenAt  = Date.now();
             this.cam.currentTrackedPlate = best.plate_text;
           }
-          // ─────────────────────────────────────────────────
 
-          // ── Abone: onaylanır onaylanmaz tetikle (hızlı) ──
           if (
-            best.confirmed &&
-            best.can_enter &&
+            best.confirmed && best.can_enter &&
             best.subscription_status === 'ACTIVE' &&
             !this.cam.processing &&
             best.plate_text !== this.cam.lastTriggeredPlate
@@ -416,11 +455,9 @@ function singleCamera(side, wsPath, apiPath) {
             this.cam.lastTriggeredPlate = best.plate_text;
             this.manualTrigger();
           }
-          // ── Misafir: 5 saniye tutarlı okuma sonrası tetikle
           const guestMs = this.cam.plateFirstSeenAt ? (Date.now() - this.cam.plateFirstSeenAt) : 0;
           if (
-            guestMs >= 5000 &&
-            best.can_enter &&
+            guestMs >= 5000 && best.can_enter &&
             best.subscription_status !== 'ACTIVE' &&
             !this.cam.processing &&
             best.plate_text !== this.cam.lastTriggeredPlate
@@ -428,13 +465,16 @@ function singleCamera(side, wsPath, apiPath) {
             this.cam.lastTriggeredPlate = best.plate_text;
             this.manualTrigger();
           }
-          // ─────────────────────────────────────────────────
         } else {
           this.cam.detection = null;
-          this.cam.plateFirstSeenAt  = 0;
+          this.cam.plateFirstSeenAt   = 0;
           this.cam.currentTrackedPlate = '';
         }
+
+        // Ack-based: sonuç geldi, bir sonraki frame'i hemen gönder
+        this._sendFrame();
       };
+
       this.cam.ws.onclose = () => {
         setTimeout(() => { if (this.cam.active) this.connectWS(); }, 2000);
       };
@@ -451,21 +491,15 @@ function singleCamera(side, wsPath, apiPath) {
         await video.play();
 
         document.getElementById('cam-placeholder').style.display = 'none';
+        // Video doğrudan tarayıcıda gösterilir — server round-trip'e gerek yok
+        video.style.display = 'block';
+        document.getElementById('cam-overlay').style.display = 'block';
         this.cam.active = true;
 
-        // Re-enumerate with labels now that permission is granted
         this.enumerateCameras();
 
-        const canvas = document.getElementById('cam-canvas');
-        canvas.width = 640; canvas.height = 360;
-        const ctx = canvas.getContext('2d');
-
-        this.cam.interval = setInterval(() => {
-          if (this.cam.ws?.readyState !== WebSocket.OPEN) return;
-          ctx.drawImage(video, 0, 0, 640, 360);
-          const frame = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
-          this.cam.ws.send(JSON.stringify({ action: 'stream', frame }));
-        }, 150);
+        // Ack-based frame gönderimi başlat (WS hazırsa hemen, değilse onopen tetikler)
+        this._sendFrame();
 
       } catch (err) {
         alert('Kamera açılamadı: ' + err.message);
@@ -475,14 +509,15 @@ function singleCamera(side, wsPath, apiPath) {
     restartCamera() {
       if (this.cam.stream) {
         this.cam.stream.getTracks().forEach(t => t.stop());
-        clearInterval(this.cam.interval);
         this.cam.active = false;
         this.cam.plateHistory = [];
-        this.cam.plateFirstSeenAt  = 0;
+        this.cam.plateFirstSeenAt   = 0;
         this.cam.currentTrackedPlate = '';
         this.cam.guestElapsed = 0;
         document.getElementById('cam-placeholder').style.display = 'flex';
-        document.getElementById('cam-img').style.display = 'none';
+        document.getElementById('cam-video').style.display = 'none';
+        document.getElementById('cam-overlay').style.display = 'none';
+        this._drawBboxes([]);
       }
       this.startCamera();
     },

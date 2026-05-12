@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Müşteri Düzenle' if customer else 'Yeni Müşteri' }}{% endblock %}
+{% block title %}{{ t('cust_edit') if customer else t('cust_new') }}{% endblock %}
 {% block content %}
 
 <div class="flex items-center gap-3 mb-2">
@@ -7,11 +7,11 @@
     <span class="material-symbols-outlined text-xl">arrow_back</span>
   </a>
   <h1 class="text-2xl font-bold text-white">
-    {{ 'Müşteri Düzenle' if customer else 'Yeni Müşteri' }}
+    {{ t('cust_edit') if customer else t('cust_new') }}
   </h1>
 </div>
 <p class="text-[#8c909f] text-sm ml-9">
-  {% if customer %}{{ customer.full_name }} · #{{ customer.id }}{% else %}Yeni müşteri kaydı oluştur{% endif %}
+  {% if customer %}{{ customer.full_name }} · #{{ customer.id }}{% else %}{{ t('cust_new_record') }}{% endif %}
 </p>
 
 <div class="max-w-2xl">
@@ -27,18 +27,18 @@
 
     <!-- Kişisel Bilgiler -->
     <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Kişisel Bilgiler</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">{{ t('cust_personal_info') }}</h3>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Ad *</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_first_name') }} *</label>
           <input type="text" name="first_name" required
                  value="{{ (form.first_name if form else customer.first_name) if (form or customer) else '' }}"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                  placeholder="Ahmet"/>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Soyad *</label>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_last_name') }} *</label>
           <input type="text" name="last_name" required
                  value="{{ (form.last_name if form else customer.last_name) if (form or customer) else '' }}"
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -49,7 +49,7 @@
       <!-- TC Kimlik No — zorunlu -->
       <div>
         <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
-          T.C. Kimlik No *
+          {{ t('cust_tc_no') }} *
         </label>
         <input type="text" name="tc_no" id="tc_no" required
                maxlength="11"
@@ -60,7 +60,7 @@
                oninput="this.value=this.value.replace(/\D/g,'').slice(0,11); validateTc(this)"/>
         <div class="flex items-center justify-between mt-1">
           <span id="tc_hint" class="text-[10px] transition-colors" style="color:#8c909f">
-            11 haneli, 0 ile başlamaz
+            {{ t('cust_tc_rule') }}
           </span>
           <span id="tc_counter" class="text-[10px] font-mono tabular-nums transition-colors" style="color:#8c909f">
             {{ ((form.tc_no if form else customer.tc_no) or '') | length }}/11
@@ -70,9 +70,7 @@
 
       <!-- Telefon — zorunlu, seçilebilir ülke kodlu -->
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
-          Telefon *
-        </label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_phone') }} *</label>
         <div class="flex gap-2">
           <select name="phone_code" id="phone_code"
                   onchange="updatePhoneHint()"
@@ -93,7 +91,7 @@
 
       <!-- E-posta -->
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">E-posta</label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_email') }}</label>
         <input type="email" name="email"
                value="{{ (form.email if form else customer.email) if (form or customer) else '' }}"
                class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -104,10 +102,10 @@
     {% if not customer %}
     <!-- Araç / Plaka — yeni müşteride zorunlu -->
     <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Araç Bilgisi</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">{{ t('cust_vehicle_info') }}</h3>
       <div>
         <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
-          Plaka *
+          {{ t('veh_plate') }} *
         </label>
         <input type="text" name="plate_number" required
                value="{{ form.plate_number if form else '' }}"
@@ -115,7 +113,7 @@
                placeholder="34 ABC 1234"
                oninput="this.value = this.value.toUpperCase()"/>
         <p class="text-[10px] text-[#8c909f] mt-1">
-          Müşteri oluşturulduğunda bu plaka otomatik araç olarak eklenir.
+          {{ t('cust_create_plate') }}
         </p>
       </div>
     </div>
@@ -123,15 +121,15 @@
 
     <!-- Ek Bilgiler -->
     <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-5">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Ek Bilgiler</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">{{ t('cust_extra_info') }}</h3>
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Adres</label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_address') }}</label>
         <textarea name="address" rows="2"
                   class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
                   placeholder="Müşteri adresi...">{{ (form.address if form else customer.address) if (form or customer) else '' }}</textarea>
       </div>
       <div>
-        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Notlar</label>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">{{ t('cust_notes') }}</label>
         <textarea name="notes" rows="2"
                   class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
                   placeholder="Özel notlar...">{{ (form.notes if form else customer.notes) if (form or customer) else '' }}</textarea>
@@ -139,12 +137,12 @@
       {% if not customer %}
       <div>
         <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">
-          Portal Şifresi <span class="normal-case font-normal">(opsiyonel)</span>
+          {{ t('cust_portal_pass') }} <span class="normal-case font-normal">({{ t('cust_optional') }})</span>
         </label>
         <input type="password" name="portal_password" minlength="6"
                class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                placeholder="Müşteri portal girişi için şifre"/>
-        <p class="text-xs text-[#8c909f] mt-1.5">Boş bırakılırsa müşteri portalına giriş yapamaz.</p>
+        <p class="text-xs text-[#8c909f] mt-1.5">{{ t('cust_no_portal') }}</p>
       </div>
       {% endif %}
     </div>
@@ -152,11 +150,11 @@
     <div class="flex gap-3">
       <a href="{{ '/customers/' + customer.id|string if customer else '/customers' }}"
          class="flex-1 h-12 flex items-center justify-center rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
-        İptal
+        {{ t('cust_cancel') }}
       </a>
       <button type="submit"
               class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
-        {{ 'Güncelle' if customer else 'Kaydet' }}
+        {{ t('cust_update') if customer else t('cust_save') }}
       </button>
     </div>
   </form>

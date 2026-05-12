@@ -6,10 +6,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
+from app.i18n import get_templates
 from app.models.parking_session import ParkingSession
 from app.models.subscription import Subscription
 from app.models.vehicle import Vehicle
@@ -18,7 +18,7 @@ from app.services.plate_checker import PlateChecker
 from src.postprocess.text_cleaner import PlateCleaner
 
 router = APIRouter(tags=["plate_query"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 _cleaner = PlateCleaner()
 
 

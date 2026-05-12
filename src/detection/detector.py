@@ -38,7 +38,7 @@ class PlateDetector:
 
     _instance: PlateDetector | None = None
 
-    def __init__(self, model_path: str, conf: float = 0.35, device: str = "auto", imgsz: int = 640):
+    def __init__(self, model_path: str, conf: float = 0.35, device: str = "auto", imgsz: int = 320):
         self._model_path = model_path
         self._conf = conf
         self._device = device
@@ -50,7 +50,7 @@ class PlateDetector:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_instance(cls, model_path: str, conf: float = 0.35, device: str = "auto", imgsz: int = 640) -> "PlateDetector":
+    def get_instance(cls, model_path: str, conf: float = 0.35, device: str = "auto", imgsz: int = 320) -> "PlateDetector":
         if cls._instance is None:
             cls._instance = cls(model_path, conf, device, imgsz)
         return cls._instance

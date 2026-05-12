@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Müşteriler{% endblock %}
+{% block title %}{{ t('cust_title') }}{% endblock %}
 {% block content %}
 
 <div class="flex justify-between items-center">
   <div>
     <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('cust_title')">Müşteriler</h1>
-    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ customers | length }} <span x-text="$store.app.t('lbl_records')">kayıt</span></p>
+    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ total }} <span x-text="$store.app.t('lbl_records')">kayıt</span></p>
   </div>
   <a href="/customers/new"
      class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
@@ -18,8 +18,8 @@
 <div class="relative">
   <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#8c909f] text-xl">search</span>
   <form method="get" action="/customers">
-    <input type="text" name="search" value="{{ search }}"
-           placeholder="İsim, telefon ara..."
+        <input type="text" name="search" value="{{ search }}"
+          placeholder="{{ t('cust_search') }}"
            class="w-full bg-[#1e1f26] rounded-2xl ghost-border pl-12 pr-4 py-3.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
   </form>
 </div>
@@ -55,11 +55,11 @@
         <a href="/customers/{{ c.id }}"
            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1e1f26] ghost-border text-xs font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
           <span class="material-symbols-outlined text-sm">open_in_new</span>
-          Detay
+          {{ t('cust_detail') }}
         </a>
         {% if user.role == 'admin' %}
         <form method="post" action="/customers/{{ c.id }}/delete"
-              onsubmit="return confirm('{{ c.full_name }} adlı müşteriyi kalıcı olarak silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!')">
+            onsubmit="return confirm('{{ t('cust_delete_confirm') | replace('{name}', c.full_name) }}')">
           <button type="submit"
                   class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-error-container/10 text-error text-xs font-semibold hover:bg-error-container/25 transition-all">
             <span class="material-symbols-outlined text-sm">delete</span>
@@ -72,11 +72,29 @@
     <div class="px-6 py-16 text-center">
       <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">group</span>
       <p class="text-[#8c909f]">
-        {% if search %}Arama sonucu bulunamadı.{% else %}Henüz kayıtlı müşteri yok.{% endif %}
+        {% if search %}{{ t('cust_no_results') }}{% else %}{{ t('cust_no_customers') }}{% endif %}
       </p>
     </div>
     {% endfor %}
   </div>
 </div>
+
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2">
+  {% if page > 1 %}
+  <a href="/customers?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    ← <span x-text="$store.app.t('btn_back')">Önceki</span>
+  </a>
+  {% endif %}
+  <span class="text-sm text-[#8c909f] px-4">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="/customers?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    Sonraki →
+  </a>
+  {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}

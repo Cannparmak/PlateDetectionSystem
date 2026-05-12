@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Borç Yönetimi{% endblock %}
+{% block title %}{{ t('nav_debts') }}{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -7,13 +7,13 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold" style="color:var(--text-primary)">Borç Yönetimi</h1>
-      <p class="text-sm mt-0.5" style="color:var(--text-subtle)">Ödenmemiş misafir park ücretleri</p>
+      <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('nav_debts')">Borç Yönetimi</h1>
+      <p class="text-sm mt-0.5" style="color:var(--text-subtle)" x-text="$store.app.t('admin_debts_sub')">Ödenmemiş misafir park ücretleri</p>
     </div>
     <div class="flex items-center gap-3 px-5 py-3 rounded-2xl ghost-border" style="background:var(--bg-card)">
       <span class="material-symbols-outlined text-error">receipt_long</span>
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">Toplam Borç</p>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)" x-text="$store.app.t('admin_total_debt')">Toplam Borç</p>
         <p class="text-xl font-bold text-error">₺{{ "%.0f"|format(total_unpaid) }}</p>
       </div>
     </div>
@@ -22,9 +22,9 @@
   <!-- Debts table -->
   <div class="rounded-2xl ghost-border overflow-hidden" style="background:var(--bg-card)">
     <div class="px-6 py-4 flex items-center justify-between" style="background:var(--bg-deep)">
-      <span class="text-sm font-bold" style="color:var(--text-primary)">Ödenmemiş Oturumlar</span>
+      <span class="text-sm font-bold" style="color:var(--text-primary)" x-text="$store.app.t('admin_unpaid_sessions')">Ödenmemiş Oturumlar</span>
       <span class="text-xs px-3 py-1 rounded-full" style="background:rgba(255,180,171,0.12);color:#ffb4ab">
-        {{ sessions|length }} kayıt
+        {{ total }} <span x-text="$store.app.t('admin_records')">{{ t('admin_records') }}</span>
       </span>
     </div>
 
@@ -33,12 +33,12 @@
       <table class="w-full text-sm">
         <thead>
           <tr style="border-bottom:1px solid rgba(66,71,84,0.15)">
-            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Plaka</th>
-            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Giriş</th>
-            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Çıkış</th>
-            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Süre</th>
-            <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Ücret</th>
-            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Ödeme</th>
+            <th class="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_plate')">Plaka</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_entry_time')">Giriş</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_exit_time')">Çıkış</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_duration')">Süre</th>
+            <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('pay_title')">Ücret</th>
+            <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-subtle)" x-text="$store.app.t('admin_pay')">Ödeme</th>
           </tr>
         </thead>
         <tbody class="divide-y" style="border-color:rgba(66,71,84,0.08)">
@@ -87,7 +87,7 @@
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:brightness-110 active:scale-95 transition-all"
                         style="background:rgba(0,165,114,0.15);color:#4edea3;border:1px solid rgba(0,165,114,0.3)">
                   <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1;">payments</span>
-                  Öde
+                  <span x-text="$store.app.t('admin_pay')">Öde</span>
                   <span class="material-symbols-outlined text-xs">expand_more</span>
                 </button>
                 <!-- Dropdown -->
@@ -100,7 +100,7 @@
                             class="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors"
                             style="color:var(--text-primary)">
                       <span class="material-symbols-outlined text-base">payments</span>
-                      Nakit
+                      <span x-text="$store.app.t('admin_cash')">Nakit</span>
                     </button>
                   </form>
                   <form method="post" action="/admin/debts/{{ s.id }}/pay">
@@ -109,7 +109,7 @@
                             class="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors"
                             style="color:var(--text-primary)">
                       <span class="material-symbols-outlined text-base">credit_card</span>
-                      Kredi Kartı
+                      <span x-text="$store.app.t('admin_card')">Kredi Kartı</span>
                     </button>
                   </form>
                 </div>
@@ -136,6 +136,24 @@
     </div>
     {% endif %}
   </div>
+
+  {% if total_pages > 1 %}
+  <div class="flex items-center justify-center gap-2">
+    {% if page > 1 %}
+    <a href="/admin/debts?page={{ page - 1 }}"
+       class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+      ← <span x-text="$store.app.t('btn_back')">Önceki</span>
+    </a>
+    {% endif %}
+    <span class="text-sm text-[#8c909f] px-4">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/admin/debts?page={{ page + 1 }}"
+       class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+      Sonraki →
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}

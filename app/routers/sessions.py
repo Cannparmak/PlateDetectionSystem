@@ -5,18 +5,18 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_staff_user, get_current_customer
+from app.i18n import get_templates
 from app.models.customer import Customer
 from app.models.parking_session import ParkingSession
 from app.models.vehicle import Vehicle
 from app.models.user import User
 
 router = APIRouter(tags=["sessions"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 
 
 @router.get("/sessions", response_class=HTMLResponse)
@@ -26,7 +26,7 @@ async def session_history(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
-    per_page = 50
+    per_page = 10
     offset = (page - 1) * per_page
 
     sessions = (

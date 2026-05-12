@@ -26,7 +26,6 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
@@ -34,13 +33,15 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_staff_user
+from app.i18n import get_templates
 from app.models.user import User
 from app.services.gate_controller import GateController
+from app.services.gate_state import set_signal
 from app.services.plate_checker import PlateChecker
 from src.pipeline import PlateVoter
 
 router = APIRouter(tags=["camera"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 logger = logging.getLogger(__name__)
 
 # Snapshot kayıt klasörü
@@ -288,6 +289,8 @@ def _query_vehicle_info(db: Session, plate_text: str) -> dict:
             "can_enter": False,
             "can_exit": False,
             "is_inside": False,
+            "debt_blocks_exit": False,
+            "total_debt": 0.0,
             "fuzzy_matched_plate": None,
         }
 
@@ -320,18 +323,41 @@ def _query_vehicle_info(db: Session, plate_text: str) -> dict:
             "expires": sub.end_date.strftime("%d.%m.%Y"),
             "plan_name": sub.plan.name if sub.plan else None,
             "days_remaining": sub.days_remaining,
-            "can_enter": not is_inside,   # aktif abonelik var + içeride değil
-            "can_exit": is_inside,        # içerideyse çıkabilir
+            "can_enter": not is_inside,
+            "can_exit": is_inside,        # aboneler borçtan bağımsız çıkabilir
             "is_inside": is_inside,
+            "debt_blocks_exit": False,
+            "total_debt": 0.0,
             "fuzzy_matched_plate": fuzzy_matched_plate,
         }
+
+    # ── Aboneliği olmayan araç — borç kontrolü ──────────────────────
+    from app.models.parking_config import ParkingConfig
+    rows = (
+        db.query(ParkingSession.fee_amount)
+        .filter(
+            ParkingSession.vehicle_id == vehicle.id,
+            ParkingSession.is_guest == True,
+            ParkingSession.is_paid == False,
+            ParkingSession.fee_amount.isnot(None),
+            ParkingSession.is_active == False,
+        )
+        .all()
+    )
+    total_debt = round(sum(r[0] for r in rows if r[0]), 2)
+    config     = db.query(ParkingConfig).first()
+    threshold  = config.debt_block_threshold if config else 500.0
+    debt_blocks_exit = is_inside and (total_debt >= threshold)
+
     return {
         "subscription_status": "NO_SUB",
         "customer_name": customer_name,
         "expires": None,
-        "can_enter": not is_inside,  # misafir olarak girebilir (borç eşiği check_entry'de yapılır)
-        "can_exit": is_inside,
+        "can_enter": not is_inside,
+        "can_exit": is_inside and not debt_blocks_exit,
         "is_inside": is_inside,
+        "debt_blocks_exit": debt_blocks_exit,
+        "total_debt": total_debt,
         "fuzzy_matched_plate": fuzzy_matched_plate,
     }
 
@@ -386,6 +412,8 @@ async def camera_entry(
         gate = GateController.get_instance()
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
+
+    set_signal(check.gate_signal)
 
     # Session'a gate sonucunu kaydet
     if check.session_id:
@@ -457,6 +485,8 @@ async def camera_exit(
         gate = GateController.get_instance()
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
+
+    set_signal(check.gate_signal)
 
     # Session'a snapshot kaydet
     if check.session_id:

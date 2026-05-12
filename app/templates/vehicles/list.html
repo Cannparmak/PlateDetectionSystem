@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Araçlar{% endblock %}
+{% block title %}{{ t('veh_title') }}{% endblock %}
 {% block content %}
 
 <div class="flex justify-between items-center">
   <div>
     <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('veh_title')">Araçlar</h1>
-    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ vehicles | length }} <span x-text="$store.app.t('lbl_vehicles_reg')">kayıtlı araç</span></p>
+    <p class="text-sm mt-1" style="color:var(--text-subtle)">{{ total }} <span x-text="$store.app.t('lbl_vehicles_reg')">kayıtlı araç</span></p>
   </div>
   <a href="/vehicles/new"
      class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
@@ -19,7 +19,7 @@
   <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#8c909f] text-xl">search</span>
   <form method="get" action="/vehicles">
     <input type="text" name="search" value="{{ search }}"
-           placeholder="Plaka ara..."
+           placeholder="{{ t('veh_search') }}"
            class="w-full bg-[#1e1f26] rounded-2xl ghost-border pl-12 pr-4 py-3.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
   </form>
 </div>
@@ -54,10 +54,10 @@
       <div>
         {% if active_subs %}
           {% set sub = active_subs[0] %}
-          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary">AKTİF</span>
-          <p class="text-xs text-[#8c909f] mt-0.5">{{ sub.days_remaining }} gün</p>
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-tertiary-container/10 text-tertiary" x-text="$store.app.t('portal_active')">AKTİF</span>
+          <p class="text-xs text-[#8c909f] mt-0.5">{{ sub.days_remaining }} <span x-text="$store.app.t('portal_days_left')">gün</span></p>
         {% else %}
-          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#33343b] text-[#8c909f]">YOK</span>
+          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#33343b] text-[#8c909f]" x-text="$store.app.t('portal_no_active_sub')">YOK</span>
         {% endif %}
       </div>
       <div class="flex items-center justify-end gap-2">
@@ -77,11 +77,29 @@
     <div class="px-6 py-16 text-center">
       <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">directions_car</span>
       <p class="text-[#8c909f]">
-        {% if search %}Arama sonucu bulunamadı.{% else %}Henüz kayıtlı araç yok.{% endif %}
+        {% if search %}{{ t('veh_no_results') }}{% else %}{{ t('veh_no_vehicles') }}{% endif %}
       </p>
     </div>
     {% endfor %}
   </div>
 </div>
+
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2">
+  {% if page > 1 %}
+  <a href="/vehicles?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    ← <span x-text="$store.app.t('btn_back')">Önceki</span>
+  </a>
+  {% endif %}
+  <span class="text-sm text-[#8c909f] px-4">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="/vehicles?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}"
+     class="px-4 py-2 rounded-xl bg-[#1e1f26] ghost-border text-sm text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
+    Sonraki →
+  </a>
+  {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}

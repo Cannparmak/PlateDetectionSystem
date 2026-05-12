@@ -16,11 +16,11 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 import app.models  # Tüm modelleri yükle — relationship çözümü için
 from app.config import settings
 from app.database import Base, engine
+from app.i18n import LANG_COOKIE_NAME, get_request_lang, get_templates, resolve_lang, translate
 from app.services.gate_controller import GateController
 
 logger = logging.getLogger(__name__)
@@ -80,13 +80,28 @@ _STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 # Templates
-templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates = get_templates(Path(__file__).parent / "templates")
+
+
+@app.middleware("http")
+async def locale_middleware(request: Request, call_next):
+    request.state.lang = resolve_lang(request)
+    response = await call_next(request)
+
+    if request.cookies.get(LANG_COOKIE_NAME) != request.state.lang:
+        response.set_cookie(
+            LANG_COOKIE_NAME,
+            request.state.lang,
+            max_age=60 * 60 * 24 * 365,
+            samesite="lax",
+        )
+    return response
 
 # ------------------------------------------------------------------
 # Router'ları ekle
 # ------------------------------------------------------------------
 
-from app.routers import auth, camera, customers, vehicles, subscriptions, sessions, admin, payment, dashboard, plate_query
+from app.routers import auth, camera, customers, vehicles, subscriptions, sessions, admin, payment, dashboard, plate_query, arduino
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
@@ -98,6 +113,7 @@ app.include_router(sessions.router)
 app.include_router(admin.router)
 app.include_router(payment.router)
 app.include_router(plate_query.router)
+app.include_router(arduino.router)
 
 # ------------------------------------------------------------------
 # Ana sayfa
@@ -115,8 +131,9 @@ async def index(request: Request):
 
 @app.exception_handler(401)
 async def unauthorized(request: Request, exc):
+    lang = get_request_lang(request)
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "Giris yapmaniz gerekiyor."}, status_code=401)
+        return JSONResponse({"detail": translate("err.auth_required", lang)}, status_code=401)
     # Musteri portal istekleri musteri login'e, diger istekler staff login'e
     if request.url.path.startswith("/musteri/"):
         return RedirectResponse("/musteri/login", status_code=302)
@@ -125,15 +142,17 @@ async def unauthorized(request: Request, exc):
 
 @app.exception_handler(403)
 async def forbidden(request: Request, exc):
+    lang = get_request_lang(request)
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "Bu islem icin yetkiniz yok."}, status_code=403)
+        return JSONResponse({"detail": translate("err.forbidden", lang)}, status_code=403)
     return RedirectResponse("/dashboard", status_code=302)
 
 
 @app.exception_handler(404)
 async def not_found(request: Request, exc):
+    lang = get_request_lang(request)
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "Endpoint bulunamadi."}, status_code=404)
+        return JSONResponse({"detail": translate("err.not_found", lang)}, status_code=404)
     return templates.TemplateResponse(
         request, "errors/404.html", status_code=404
     )
@@ -142,8 +161,9 @@ async def not_found(request: Request, exc):
 @app.exception_handler(500)
 async def server_error(request: Request, exc):
     logger.exception("500 hatasi: %s", request.url)
+    lang = get_request_lang(request)
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "Sunucu hatasi."}, status_code=500)
+        return JSONResponse({"detail": translate("err.server", lang)}, status_code=500)
     return templates.TemplateResponse(
         request, "errors/500.html", status_code=500
     )

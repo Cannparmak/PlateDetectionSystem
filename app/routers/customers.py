@@ -5,12 +5,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_staff_user, require_admin
+from app.i18n import get_templates
 from app.models.customer import Customer
 from app.models.subscription import Subscription
 from app.models.subscription_plan import SubscriptionPlan
@@ -22,7 +22,7 @@ from src.postprocess.text_cleaner import PlateCleaner
 _cleaner = PlateCleaner()
 
 router = APIRouter(prefix="/customers", tags=["customers"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 
 
 # ---------------------------------------------------------------------------
@@ -107,9 +107,11 @@ def _normalize_plate(raw: str) -> str:
 async def customer_list(
     request: Request,
     search: str = "",
+    page: int = 1,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
+    per_page = 10
     q = db.query(Customer).filter(Customer.is_active == True).options(joinedload(Customer.vehicles))
     if search:
         q = q.filter(
@@ -117,12 +119,17 @@ async def customer_list(
             (Customer.last_name.ilike(f"%{search}%")) |
             (Customer.phone.ilike(f"%{search}%"))
         )
-    customers = q.order_by(Customer.created_at.desc()).all()
+    total = q.count()
+    customers = q.order_by(Customer.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
     return templates.TemplateResponse(request, "customers/list.html", {
         "user": user,
         "customers": customers,
         "search": search,
         "phone_country_code": settings.PHONE_COUNTRY_CODE,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
     })
 
 

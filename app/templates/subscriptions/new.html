@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Abonelik Sat{% endblock %}
+{% block title %}{{ t('sub_sell') }}{% endblock %}
 {% block content %}
 
 <div class="flex items-center gap-3 mb-2">
   <a href="/subscriptions" class="text-[#8c909f] hover:text-white transition-colors">
     <span class="material-symbols-outlined text-xl">arrow_back</span>
   </a>
-  <h1 class="text-2xl font-bold text-white">Abonelik Sat</h1>
+  <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('sub_sell')">Abonelik Sat</h1>
 </div>
-<p class="text-[#8c909f] text-sm ml-9">Plan ve araç seçerek abonelik oluştur</p>
+<p class="text-[#8c909f] text-sm ml-9" x-text="$store.app.t('sub_plans') + ' / ' + $store.app.t('veh_title')">Plan ve araç seçerek abonelik oluştur</p>
 
 <div class="max-w-3xl" x-data="{ selectedPlan: {{ vehicle.subscriptions[0].plan_id if vehicle and vehicle.subscriptions else 'null' }}, selectedVehicle: {{ vehicle.id if vehicle else 'null' }} }">
 
@@ -34,18 +34,18 @@
     </div>
     {% else %}
     <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-3">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest">Araç Plakası *</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest" x-text="$store.app.t('veh_plate') + ' *'">Araç Plakası *</h3>
       <input type="text" name="vehicle_plate_search" id="vehiclePlateSearch"
-             placeholder="Plaka girin..."
+             placeholder="{{ t('veh_search') }}"
              class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono tracking-widest uppercase"/>
       <input type="hidden" name="vehicle_id" id="vehicleIdInput" required/>
-      <p class="text-xs text-[#8c909f]">Arama yapın ve araç seçin ya da direkt ID girin.</p>
+      <p class="text-xs text-[#8c909f]" x-text="$store.app.t('btn_search') + ' / ID'">Arama yapın ve araç seçin ya da direkt ID girin.</p>
     </div>
     {% endif %}
 
     <!-- Plan seçimi -->
     <div class="space-y-3">
-      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest px-1">Plan Seçin *</h3>
+      <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest px-1" x-text="$store.app.t('sub_plans') + ' *'">Plan Seçin *</h3>
       <div class="grid grid-cols-2 gap-4">
         {% for plan in plans %}
         <label class="cursor-pointer">
@@ -64,8 +64,8 @@
                 <span class="material-symbols-outlined text-on-primary text-sm">check</span>
               </div>
             </div>
-            <p class="font-bold text-white">{{ plan.name }}</p>
-            <p class="text-xs text-[#8c909f] mt-0.5">{{ (plan.duration_hours / 24) | int }} gün</p>
+            <p class="font-bold text-white" x-text="$store.app.planName({{ plan.name | tojson }})">{{ pt(plan.name) }}</p>
+            <p class="text-xs text-[#8c909f] mt-0.5">{{ (plan.duration_hours / 24) | int }} <span x-text="$store.app.t('portal_days_left')">gün</span></p>
             <p class="text-2xl font-bold text-white mt-3">{{ plan.price | int }} <span class="text-sm text-[#8c909f] font-normal">₺</span></p>
           </div>
         </label>
@@ -76,11 +76,11 @@
     <div class="flex gap-3 pt-2">
       <a href="/subscriptions"
          class="flex-1 h-12 flex items-center justify-center rounded-2xl bg-[#1e1f26] ghost-border text-sm font-semibold text-[#c2c6d6] hover:text-white hover:bg-surface-container-high transition-all">
-        İptal
+        {{ t('btn_cancel') }}
       </a>
       <button type="submit"
               class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
-        Ödemeye Geç
+        {{ t('btn_confirm') }}
       </button>
     </div>
   </form>

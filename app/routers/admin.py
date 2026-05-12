@@ -4,11 +4,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_staff_user, require_admin
+from app.i18n import get_templates
 from app.models.customer import Customer
 from app.models.parking_config import ParkingConfig
 from app.models.parking_session import ParkingSession
@@ -20,7 +20,7 @@ from app.models.parking_rate_bracket import ParkingRateBracket
 from app.services.auth_service import hash_password
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+templates = get_templates(Path(__file__).parent.parent / "templates")
 
 
 @router.get("", response_class=HTMLResponse)
@@ -156,27 +156,40 @@ async def reports(
 @router.get("/debts", response_class=HTMLResponse)
 async def admin_debts(
     request: Request,
+    page: int = 1,
     db: Session = Depends(get_db),
     user: User = Depends(require_admin),
 ):
     """Ödenmemiş misafir borçları listesi."""
-    sessions = (
+    per_page = 10
+    base_q = (
         db.query(ParkingSession)
-        .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
         .filter(
             ParkingSession.is_guest == True,
             ParkingSession.is_paid == False,
             ParkingSession.fee_amount.isnot(None),
             ParkingSession.is_active == False,
         )
+    )
+    all_sessions = base_q.with_entities(ParkingSession.fee_amount).all()
+    total_unpaid = round(sum(s.fee_amount for s in all_sessions if s.fee_amount), 2)
+    total = base_q.count()
+    sessions = (
+        base_q
+        .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
         .order_by(ParkingSession.exit_time.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
-    total_unpaid = round(sum(s.fee_amount for s in sessions if s.fee_amount), 2)
     return templates.TemplateResponse(request, "admin/debts.html", {
         "user": user,
         "sessions": sessions,
         "total_unpaid": total_unpaid,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
     })
 
 

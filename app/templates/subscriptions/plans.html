@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Abonelik Planları{% endblock %}
+{% block title %}{{ t('sub_plans_page') }}{% endblock %}
 {% block content %}
 
 <div class="flex justify-between items-center">
   <div>
-    <h1 class="text-2xl font-bold text-white">Abonelik Planları</h1>
-    <p class="text-[#8c909f] text-sm mt-1">Mevcut abonelik paketleri</p>
+    <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('sub_plans_page')">Abonelik Planları</h1>
+    <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('sub_plans_desc')">Mevcut abonelik paketleri</p>
   </div>
   <a href="/subscriptions/new"
      class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
     <span class="material-symbols-outlined text-xl">add_card</span>
-    Abonelik Sat
+    <span x-text="$store.app.t('sub_sell_btn')">Abonelik Sat</span>
   </a>
 </div>
 
@@ -23,8 +23,8 @@
         <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1;">card_membership</span>
       </div>
       <div>
-        <h3 class="font-bold text-white">{{ plan.name }}</h3>
-        <p class="text-xs text-[#8c909f]">{{ (plan.duration_hours / 24) | int }} gün</p>
+        <h3 class="font-bold text-white" x-text="$store.app.planName({{ plan.name | tojson }})">{{ pt(plan.name) }}</h3>
+        <p class="text-xs text-[#8c909f]">{{ (plan.duration_hours / 24) | int }} <span x-text="$store.app.t('portal_days_left')">gün</span></p>
       </div>
     </div>
 
@@ -39,13 +39,13 @@
 
     <a href="/subscriptions/new"
        class="w-full h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-all">
-      Bu Planı Sat
+      <span x-text="$store.app.t('sub_sell_plan')">Bu Planı Sat</span>
     </a>
   </div>
   {% else %}
   <div class="col-span-3 bg-surface-container-low rounded-3xl p-16 ghost-border text-center">
     <span class="material-symbols-outlined text-5xl text-[#424754] block mb-3">card_membership</span>
-    <p class="text-[#8c909f]">Henüz plan tanımlanmamış.</p>
+    <p class="text-[#8c909f]" x-text="$store.app.t('sub_no_plans')">Henüz plan tanımlanmamış.</p>
   </div>
   {% endfor %}
 </div>

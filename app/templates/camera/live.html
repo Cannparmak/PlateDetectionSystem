@@ -8,7 +8,7 @@
   <div class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-2xl font-bold" style="color:var(--text-primary)" x-text="$store.app.t('cam_title')">Canlı Kamera</h1>
-      <p style="color:var(--text-subtle)" class="text-sm mt-1">Giriş ve çıkış kameraları bağımsız çalışır</p>
+      <p style="color:var(--text-subtle)" class="text-sm mt-1" x-text="$store.app.t('admin_camera_desc')">Giriş ve çıkış kameraları bağımsız çalışır</p>
     </div>
     <!-- Occupancy pill -->
     <div class="flex items-center gap-3 px-5 py-2.5 rounded-2xl ghost-border" style="background:var(--bg-card)">
@@ -23,7 +23,7 @@
         <span class="absolute inset-0 flex items-center justify-center text-xs font-bold" style="color:var(--accent)" x-text="occupancyPct + '%'"></span>
       </div>
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)">Doluluk</p>
+        <p class="text-[10px] font-bold uppercase tracking-widest" style="color:var(--text-subtle)" x-text="$store.app.t('lbl_occupancy')">Doluluk</p>
         <p class="text-sm font-bold" style="color:var(--text-primary)">
           <span x-text="occupancyActive"></span> / <span x-text="occupancyCapacity"></span> araç
         </p>
@@ -39,32 +39,35 @@
       <!-- Label -->
       <div class="flex items-center gap-2">
         <div class="w-3 h-3 rounded-full bg-tertiary-container success-glow animate-pulse"></div>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-tertiary">GİRİŞ KAMERASI</h2>
-        <span class="text-xs ml-auto" style="color:var(--text-subtle)">Entry Gate</span>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-tertiary" x-text="$store.app.t('admin_entry_camera')">GİRİŞ KAMERASI</h2>
+        <span class="text-xs ml-auto" style="color:var(--text-subtle)" x-text="$store.app.t('admin_entry_gate')">Entry Gate</span>
       </div>
 
       <!-- Feed -->
       <div class="relative rounded-2xl overflow-hidden ghost-border" style="aspect-ratio:16/9; background:var(--bg-deep)">
-        <video id="entry-video" autoplay muted playsinline class="hidden"></video>
-        <canvas id="entry-canvas" class="hidden"></canvas>
-        <img id="entry-img" class="absolute inset-0 w-full h-full object-cover" style="display:none" alt="Entry"/>
+        <video id="entry-video" autoplay muted playsinline
+               class="absolute inset-0 w-full h-full object-cover" style="display:none"></video>
+        <canvas id="entry-overlay" width="640" height="360"
+                class="absolute inset-0 w-full h-full"
+                style="display:none; pointer-events:none; z-index:5"></canvas>
+        <canvas id="entry-canvas" class="hidden" width="640" height="360"></canvas>
 
         <!-- Placeholder -->
         <div id="entry-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <span class="material-symbols-outlined text-5xl" style="color:var(--bg-chip)">videocam_off</span>
-          <p class="text-sm" style="color:var(--text-subtle)">Giriş kamerasını başlatın</p>
+          <p class="text-sm" style="color:var(--text-subtle)" x-text="$store.app.t('admin_start_entry')">Giriş kamerasını başlatın</p>
           <button @click="startCamera('entry')"
                   class="px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
                   style="background:var(--accent);color:var(--accent-on)">
             <span class="material-symbols-outlined text-base">videocam</span>
-            Başlat
+            <span x-text="$store.app.t('admin_start_camera')">Başlat</span>
           </button>
         </div>
 
         <!-- Badges -->
         <div x-show="entry.active" class="absolute top-3 left-3 flex items-center gap-1.5 bg-tertiary-container/90 px-2.5 py-1 rounded-full z-10">
           <div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-          <span class="text-[10px] font-bold text-white">LIVE · GİRİŞ</span>
+          <span class="text-[10px] font-bold text-white" x-text="$store.app.t('admin_live') + ' · ' + $store.app.t('admin_entry_camera')">LIVE · GİRİŞ</span>
         </div>
         <div x-show="entry.active" class="absolute top-3 right-3 bg-black/60 px-2.5 py-1 rounded-full z-10">
           <span class="text-[10px] font-mono text-white" x-text="entry.fps + 'fps · ' + entry.ms + 'ms'"></span>
@@ -81,18 +84,18 @@
       <!-- Detection info -->
       <div class="rounded-2xl p-4 ghost-border flex items-center gap-4" style="background:var(--bg-card)">
         <div class="flex-1 min-w-0">
-          <p class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--text-subtle)">Tespit Edilen Plaka</p>
+          <p class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color:var(--text-subtle)" x-text="$store.app.t('admin_detected_plate')">Tespit Edilen Plaka</p>
           <p class="plate-font font-bold text-xl" style="color:var(--text-primary)"
              x-text="entry.detection ? entry.detection.plate_text : '— — —'"></p>
           <p class="text-xs mt-0.5" style="color:var(--text-muted)"
-             x-text="entry.detection ? (entry.detection.customer_name || 'Bilinmiyor') : ''"></p>
+             x-text="entry.detection ? (entry.detection.customer_name || $store.app.t('admin_unknown')) : ''"></p>
         </div>
         <div class="flex flex-col items-end gap-1">
           <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
                 :class="entry.detection?.subscription_status === 'ACTIVE'
                   ? 'bg-tertiary-container/20 text-tertiary'
                   : 'bg-error-container/20 text-error'"
-                x-text="entry.detection ? entry.detection.subscription_status || 'NO SUB' : '—'"></span>
+                x-text="entry.detection ? entry.detection.subscription_status || $store.app.t('admin_no_sub') : '—'"></span>
           <template x-if="entry.result">
             <span class="text-xs font-semibold"
                   :class="entry.result.success ? 'text-tertiary' : 'text-error'"
@@ -109,7 +112,7 @@
                      disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
               style="background-color: rgba(0,165,114,0.20); color:#4edea3; border:1px solid rgba(0,165,114,0.3)">
         <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1;">login</span>
-        <span x-text="entry.processing ? 'İşleniyor...' : $store.app.t('cam_entry') + ' — MANUAL ENTRY'"></span>
+        <span x-text="entry.processing ? $store.app.t('admin_processing') : $store.app.t('cam_entry') + ' — MANUAL ENTRY'"></span>
       </button>
     </div>
 
@@ -118,25 +121,28 @@
       <!-- Label -->
       <div class="flex items-center gap-2">
         <div class="w-3 h-3 rounded-full bg-error animate-pulse" style="box-shadow:0 0 8px rgba(255,0,0,0.5)"></div>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-error">ÇIKIŞ KAMERASI</h2>
-        <span class="text-xs ml-auto" style="color:var(--text-subtle)">Exit Gate</span>
+        <h2 class="text-sm font-bold uppercase tracking-widest text-error" x-text="$store.app.t('admin_exit_camera')">ÇIKIŞ KAMERASI</h2>
+        <span class="text-xs ml-auto" style="color:var(--text-subtle)" x-text="$store.app.t('admin_exit_gate')">Exit Gate</span>
       </div>
 
       <!-- Feed -->
       <div class="relative rounded-2xl overflow-hidden ghost-border" style="aspect-ratio:16/9; background:var(--bg-deep)">
-        <video id="exit-video" autoplay muted playsinline class="hidden"></video>
-        <canvas id="exit-canvas" class="hidden"></canvas>
-        <img id="exit-img" class="absolute inset-0 w-full h-full object-cover" style="display:none" alt="Exit"/>
+        <video id="exit-video" autoplay muted playsinline
+               class="absolute inset-0 w-full h-full object-cover" style="display:none"></video>
+        <canvas id="exit-overlay" width="640" height="360"
+                class="absolute inset-0 w-full h-full"
+                style="display:none; pointer-events:none; z-index:5"></canvas>
+        <canvas id="exit-canvas" class="hidden" width="640" height="360"></canvas>
 
         <!-- Placeholder -->
         <div id="exit-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <span class="material-symbols-outlined text-5xl" style="color:var(--bg-chip)">videocam_off</span>
-          <p class="text-sm" style="color:var(--text-subtle)">Çıkış kamerasını başlatın</p>
+          <p class="text-sm" style="color:var(--text-subtle)" x-text="$store.app.t('admin_start_exit')">Çıkış kamerasını başlatın</p>
           <button @click="startCamera('exit')"
                   class="px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
                   style="background:var(--accent);color:var(--accent-on)">
             <span class="material-symbols-outlined text-base">videocam</span>
-            Başlat
+            <span x-text="$store.app.t('admin_start_camera')">Başlat</span>
           </button>
         </div>
 
@@ -197,7 +203,7 @@
   <div x-show="availableCameras.length > 1"
        class="mt-4 p-4 rounded-2xl ghost-border flex items-center gap-6 flex-wrap"
        style="background:var(--bg-card)">
-    <span class="material-symbols-outlined" style="color:var(--accent)">settings_input_component</span>
+    <span class="material-symbols-outlined" style="color:var(--accent)">tune</span>
     <div class="flex items-center gap-3">
       <label class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-subtle)">Giriş Kamerası</label>
       <select x-model="entry.deviceId" @change="restartCamera('entry')"
@@ -264,13 +270,13 @@ function dualCamera() {
 
     entry: {
       active: false, processing: false,
-      ws: null, stream: null, interval: null,
+      ws: null, stream: null,
       detection: null, result: null,
       fps: 0, ms: 0, deviceId: ''
     },
     exitCam: {
       active: false, processing: false,
-      ws: null, stream: null, interval: null,
+      ws: null, stream: null,
       detection: null, result: null,
       fps: 0, ms: 0, deviceId: ''
     },
@@ -292,25 +298,60 @@ function dualCamera() {
 
     panel(side) { return side === 'entry' ? this.entry : this.exitCam; },
 
+    _sendFrame(side) {
+      const p = this.panel(side);
+      if (!p.active || p.ws?.readyState !== WebSocket.OPEN) return;
+      const video  = document.getElementById(`${side}-video`);
+      const canvas = document.getElementById(`${side}-canvas`);
+      canvas.getContext('2d').drawImage(video, 0, 0, 640, 360);
+      const frame = canvas.toDataURL('image/jpeg', 0.60).split(',')[1];
+      p.ws.send(JSON.stringify({ action: 'stream', frame }));
+    },
+
+    _drawBboxes(side, detections) {
+      const overlay = document.getElementById(`${side}-overlay`);
+      if (!overlay) return;
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0, 0, 640, 360);
+      for (const det of detections) {
+        if (!det.bbox) continue;
+        const [x1, y1, x2, y2] = det.bbox;
+        const color = '#00e589';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        if (det.plate_text) {
+          const label = det.plate_text + ' ' + Math.round((det.confidence_det || 0) * 100) + '%';
+          ctx.fillStyle = 'rgba(0,0,0,0.72)';
+          ctx.fillRect(x1, y2 + 2, Math.min(ctx.measureText(label).width + 8, x2 - x1 + 40), 18);
+          ctx.fillStyle = color;
+          ctx.font = 'bold 12px monospace';
+          ctx.fillText(label, x1 + 4, y2 + 15);
+        }
+      }
+    },
+
     connectWS(side) {
       const p = this.panel(side);
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       p.ws = new WebSocket(`${proto}://${location.host}/ws/stream`);
+
+      p.ws.addEventListener('open', () => {
+        if (p.active) this._sendFrame(side);
+      });
+
       p.ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type !== 'result') return;
-        const img = document.getElementById(`${side}-img`);
-        if (data.annotated_frame) {
-          img.src = 'data:image/jpeg;base64,' + data.annotated_frame;
-          img.style.display = 'block';
-        }
         p.fps = data.fps || 0;
         p.ms  = data.processing_ms || 0;
+        this._drawBboxes(side, data.detections || []);
         if (data.detections && data.detections.length > 0) {
           p.detection = data.detections.reduce((a, b) => a.confidence_det > b.confidence_det ? a : b);
         } else {
           p.detection = null;
         }
+        this._sendFrame(side);
       };
       p.ws.onclose = () => {
         setTimeout(() => { if (p.active) this.connectWS(side); }, 2000);
@@ -329,20 +370,12 @@ function dualCamera() {
         await video.play();
 
         document.getElementById(`${side}-placeholder`).style.display = 'none';
+        video.style.display = 'block';
+        document.getElementById(`${side}-overlay`).style.display = 'block';
         p.active = true;
 
         if (!this.availableCameras.length) this.enumerateCameras();
-
-        const canvas = document.getElementById(`${side}-canvas`);
-        const ctx = canvas.getContext('2d');
-        canvas.width = 640; canvas.height = 360;
-
-        p.interval = setInterval(() => {
-          if (p.ws?.readyState !== WebSocket.OPEN) return;
-          ctx.drawImage(video, 0, 0, 640, 360);
-          const frame = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
-          p.ws.send(JSON.stringify({ action: 'stream', frame }));
-        }, 150);
+        this._sendFrame(side);
 
       } catch (err) {
         alert(`${side === 'entry' ? 'Giriş' : 'Çıkış'} kamerası açılamadı: ` + err.message);
@@ -353,10 +386,11 @@ function dualCamera() {
       const p = this.panel(side);
       if (p.stream) {
         p.stream.getTracks().forEach(t => t.stop());
-        clearInterval(p.interval);
         p.active = false;
         document.getElementById(`${side}-placeholder`).style.display = 'flex';
-        document.getElementById(`${side}-img`).style.display = 'none';
+        document.getElementById(`${side}-video`).style.display = 'none';
+        document.getElementById(`${side}-overlay`).style.display = 'none';
+        this._drawBboxes(side, []);
       }
       this.startCamera(side);
     },

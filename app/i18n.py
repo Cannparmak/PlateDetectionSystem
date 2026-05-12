@@ -199,6 +199,22 @@ def get_request_lang(request: Request) -> str:
     return normalize_lang(getattr(request.state, "lang", None) or resolve_lang(request))
 
 
+PLAN_NAME_TRANSLATIONS: dict[str, dict[str, str]] = {
+    "Saatlik":  {"tr": "Saatlik",    "en": "Hourly"},
+    "Günlük":   {"tr": "Günlük",     "en": "Daily"},
+    "Haftalık": {"tr": "Haftalık",   "en": "Weekly"},
+    "Aylık":    {"tr": "Aylık",      "en": "Monthly"},
+    "3 Aylık":  {"tr": "3 Aylık",    "en": "Quarterly"},
+    "6 Aylık":  {"tr": "6 Aylık",    "en": "Semi-Annual"},
+    "Yıllık":   {"tr": "Yıllık",     "en": "Annual"},
+}
+
+
+def translate_plan_name(name: str, lang: str | None = None) -> str:
+    target = normalize_lang(lang)
+    return PLAN_NAME_TRANSLATIONS.get(name, {}).get(target) or name
+
+
 def translate(key: str, lang: str | None = None, **kwargs: Any) -> str:
     target_lang = normalize_lang(lang)
     value = TRANSLATIONS.get(key, {}).get(target_lang) or TRANSLATIONS.get(key, {}).get(DEFAULT_LANG) or key
@@ -216,9 +232,13 @@ def i18n_context_processor(request: Request) -> dict[str, Any]:
     def _t(key: str, **kwargs: Any) -> str:
         return translate(key, lang=lang, **kwargs)
 
+    def _pt(name: str) -> str:
+        return translate_plan_name(name, lang=lang)
+
     return {
         "lang": lang,
         "t": _t,
+        "pt": _pt,
         "supported_langs": SUPPORTED_LANGS,
     }
 

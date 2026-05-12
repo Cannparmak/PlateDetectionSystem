@@ -42,6 +42,16 @@ class Settings(BaseSettings):
     # Telefon ülke kodu (+90 Türkiye, +1 ABD, vb.)
     PHONE_COUNTRY_CODE: str = "+90"
 
+    # Mail
+    MAIL_FROM: str = "canparkoto@gmail.com"
+    MAIL_USERNAME: str = "canparkoto@gmail.com"
+    MAIL_PASSWORD: str = ""
+    MAIL_HOST: str = "smtp.gmail.com"
+    MAIL_PORT: int = 587
+
+    # Arduino API
+    ARDUINO_API_KEY: str = "arduino-secret-key-change-this"
+
     # Gate controller (seri port)
     GATE_ENABLED: bool = False
     GATE_PORT: str = "COM3"        # Windows: COM3, Linux: /dev/ttyUSB0

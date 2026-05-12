@@ -1,8 +1,8 @@
 """
-OtoparkPro — Başlatıcı
+CanPark — Başlatıcı
 
 Kullanım:
-    python run.py
+    python run.pyS
     python run.py --port 8080
     python run.py --reload   (geliştirme modu)
 """

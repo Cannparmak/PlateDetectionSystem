@@ -3,9 +3,16 @@
 {% block content %}
 
 <div>
-  <h1 class="text-2xl font-bold text-white">Hoş Geldiniz, {{ customer.full_name }}</h1>
-  <p class="text-[#8c909f] text-sm mt-1">Araçlarınız ve aboneliklerinizi buradan yönetebilirsiniz.</p>
+  <h1 class="text-2xl font-bold text-white"><span x-text="$store.app.t('portal_welcome')">Hoş Geldiniz</span>, {{ customer.full_name }}</h1>
+  <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('portal_manage_desc')">Araçlarınız ve aboneliklerinizi buradan yönetebilirsiniz.</p>
 </div>
+
+{% if vehicle_error %}
+<div class="p-4 bg-[#93000a]/20 border border-[#93000a]/30 rounded-2xl flex items-center gap-3 text-[#ffb4ab] text-sm">
+  <span class="material-symbols-outlined text-base">error</span>
+  {{ vehicle_error }}
+</div>
+{% endif %}
 
 {% for v in vehicles %}
 <div class="bg-[#1e1f26] rounded-3xl p-6 ghost-border">
@@ -16,9 +23,18 @@
       </div>
       <div>
         <h3 class="font-mono font-bold text-white text-lg">{{ v.plate_display }}</h3>
-        <p class="text-sm text-[#8c909f]">{{ v.brand or '' }} {{ v.model or '' }} · {{ v.vehicle_type }}</p>
+        <p class="text-sm text-[#8c909f]">{{ v.brand or '' }} {{ v.model or '' }}{% if v.brand or v.model %} · {% endif %}{{ v.vehicle_type }}</p>
       </div>
     </div>
+    <!-- Araç sil -->
+    <form method="post" action="/musteri/vehicles/{{ v.id }}/remove"
+          x-data
+          @submit.prevent="if(confirm('{{ v.plate_display }} aracını silmek istiyor musunuz?')) $el.submit()">
+      <button type="submit"
+              class="w-8 h-8 rounded-xl flex items-center justify-center text-[#8c909f] hover:text-[#ffb4ab] hover:bg-[#93000a]/15 transition-all">
+        <span class="material-symbols-outlined text-base">delete</span>
+      </button>
+    </form>
   </div>
 
   {% set active_subs = v.subscriptions | selectattr('is_active') | list %}
@@ -28,28 +44,28 @@
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 1;">verified</span>
         <div>
-          <p class="text-sm font-semibold text-tertiary-fixed-dim">{{ sub.plan.name if sub.plan else '—' }}</p>
-          <p class="text-xs text-[#8c909f]">{{ sub.end_date.strftime('%d.%m.%Y') }}'e kadar geçerli · {{ sub.days_remaining }} gün kaldı</p>
+          <p class="text-sm font-semibold text-tertiary-fixed-dim" x-text="$store.app.planName({{ (sub.plan.name if sub.plan else '') | tojson }})">{{ pt(sub.plan.name) if sub.plan else '—' }}</p>
+          <p class="text-xs text-[#8c909f]">{{ sub.end_date.strftime('%d.%m.%Y') }} <span x-text="$store.app.t('portal_valid_until')">geçerli</span> · {{ sub.days_remaining }} <span x-text="$store.app.t('portal_days_left')">gün kaldı</span></p>
         </div>
       </div>
-      <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-tertiary-container/10 text-tertiary">AKTİF</span>
+      <span class="text-[10px] font-bold px-3 py-1 rounded-full bg-tertiary-container/10 text-tertiary" x-text="$store.app.t('portal_active')">AKTIF</span>
     </div>
     {% if sub.days_remaining <= 7 %}
     <div class="mt-3 p-3 bg-[#f59e0b]/10 rounded-xl text-[#f59e0b] text-xs flex items-center gap-2">
       <span class="material-symbols-outlined text-sm">warning</span>
-      Aboneliğiniz {{ sub.days_remaining }} gün içinde sona eriyor.
-      <a href="/musteri/subscriptions" class="underline font-semibold">Uzat</a>
+      <span x-text="$store.app.t('lbl_expiring')">Süresi Dolacak</span>: {{ sub.days_remaining }} <span x-text="$store.app.t('portal_days_left')">gün kaldı</span>
+      <a href="/musteri/subscriptions" class="underline font-semibold" x-text="$store.app.t('portal_extend')">Uzat</a>
     </div>
     {% endif %}
   {% else %}
     <div class="bg-[#0c0e14] rounded-2xl p-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-error">cancel</span>
-        <p class="text-sm text-[#8c909f]">Aktif abonelik yok</p>
+        <p class="text-sm text-[#8c909f]" x-text="$store.app.t('portal_no_active_sub')">Aktif abonelik yok</p>
       </div>
       <a href="/musteri/subscriptions"
          class="text-xs font-bold px-3 py-1.5 rounded-xl bg-primary text-on-primary hover:brightness-110 transition-all">
-        Abonelik Al
+        <span x-text="$store.app.t('portal_buy_sub')">Abonelik Al</span>
       </a>
     </div>
   {% endif %}
@@ -61,20 +77,132 @@
     <div class="flex items-center gap-3">
       <span class="material-symbols-outlined text-[#ffb4ab]">receipt_long</span>
       <div>
-        <p class="text-sm font-semibold text-[#ffb4ab]">Ödenmemiş Borç</p>
-        <p class="text-xs text-[#8c909f]">Park ücreti tahsilat bekliyor</p>
+        <p class="text-sm font-semibold text-[#ffb4ab]" x-text="$store.app.t('portal_unpaid_debt')">Ödenmemiş Borç</p>
+        <p class="text-xs text-[#8c909f]" x-text="$store.app.t('portal_waiting_fee')">Park ücreti tahsilat bekliyor</p>
       </div>
     </div>
     <p class="text-xl font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(debt) }}</p>
   </div>
   {% endif %}
 </div>
-{% else %}
-<div class="bg-[#1e1f26] rounded-3xl p-10 ghost-border text-center">
-  <span class="material-symbols-outlined text-5xl text-[#424754] mb-4 block">directions_car</span>
-  <p class="text-[#8c909f]">Henüz kayıtlı aracınız yok.</p>
-  <p class="text-[#8c909f] text-sm mt-1">Kasiyerden araç kaydettirmenizi isteyin.</p>
-</div>
 {% endfor %}
+
+<!-- Araç Ekle Kartı -->
+<div x-data="{ open: {{ 'true' if not vehicles else 'false' }} }" class="bg-[#1e1f26] rounded-3xl ghost-border overflow-hidden">
+
+  <!-- Başlık / toggle -->
+  <button @click="open = !open"
+          class="w-full flex items-center justify-between px-6 py-5 hover:bg-[#25262d] transition-colors">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings:'FILL' 1;">add_circle</span>
+      </div>
+      <div class="text-left">
+        <p class="font-semibold text-white text-sm">Araç Ekle</p>
+        <p class="text-xs text-[#8c909f]">Plaka bilgilerinizi girerek araç kaydı oluşturun</p>
+      </div>
+    </div>
+    <span class="material-symbols-outlined text-[#8c909f] transition-transform duration-200"
+          :class="open ? 'rotate-180' : ''">expand_more</span>
+  </button>
+
+  <!-- Form -->
+  <div x-show="open" x-transition class="px-6 pb-6 border-t border-[rgba(66,71,84,0.15)]">
+    <form method="post" action="/musteri/vehicles/add" class="mt-5 space-y-4">
+
+      <!-- Plaka -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Plaka *</label>
+        <div class="flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-3">
+          <span class="material-symbols-outlined text-[#8c909f] text-base">pin</span>
+          <input type="text" name="plate_display" required
+                 class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] uppercase"
+                 placeholder="34 ABC 1234"
+                 oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+      </div>
+
+      <!-- Araç tipi — custom dropdown -->
+      <div x-data="{
+            open: false,
+            selected: 'otomobil',
+            options: [
+              {value:'otomobil', label:'Otomobil'},
+              {value:'suv',      label:'SUV'},
+              {value:'minibüs',  label:'Minibüs'},
+              {value:'kamyonet', label:'Kamyonet'},
+            ],
+            get label(){ return this.options.find(o=>o.value===this.selected)?.label ?? '' }
+          }" @click.outside="open=false" class="relative">
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Araç Tipi</label>
+        <input type="hidden" name="vehicle_type" :value="selected"/>
+        <button type="button" @click="open=!open"
+                class="w-full flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-3 hover:bg-[#1e2029] transition-colors">
+          <span class="material-symbols-outlined text-[#8c909f] text-base">directions_car</span>
+          <span class="flex-1 text-left text-sm text-[#e2e2eb]" x-text="label"></span>
+          <span class="material-symbols-outlined text-[#8c909f] text-base transition-transform duration-150"
+                :class="open ? 'rotate-180' : ''">expand_more</span>
+        </button>
+        <!-- Dropdown listesi -->
+        <div x-show="open" x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+             class="absolute z-50 mt-1 w-full rounded-xl overflow-hidden shadow-xl"
+             style="background:var(--bg-sidebar);border:1px solid var(--divider);">
+          <template x-for="opt in options" :key="opt.value">
+            <button type="button"
+                    @click="selected=opt.value; open=false"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors"
+                    :class="selected===opt.value
+                      ? 'font-semibold'
+                      : 'font-normal'"
+                    :style="selected===opt.value
+                      ? 'color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)'
+                      : 'color:var(--text-primary)'">
+              <span class="material-symbols-outlined text-base opacity-0"
+                    :style="selected===opt.value ? 'opacity:1;color:var(--accent)' : ''">check</span>
+              <span x-text="opt.label"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Marka / Model yan yana -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Marka</label>
+          <input type="text" name="brand"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] border-none focus:ring-0"
+                 placeholder="Toyota"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Model</label>
+          <input type="text" name="model"
+                 class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] border-none focus:ring-0"
+                 placeholder="Corolla"/>
+        </div>
+      </div>
+
+      <!-- Renk -->
+      <div>
+        <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-2">Renk</label>
+        <div class="flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-3">
+          <span class="material-symbols-outlined text-[#8c909f] text-base">palette</span>
+          <input type="text" name="color"
+                 class="flex-1 bg-transparent border-none focus:ring-0 text-sm text-[#e2e2eb] placeholder:text-[#8c909f]"
+                 placeholder="Beyaz"/>
+        </div>
+      </div>
+
+      <button type="submit"
+              class="w-full h-11 bg-primary text-on-primary font-bold rounded-xl flex items-center justify-center gap-2
+                     hover:brightness-110 active:scale-95 transition-all">
+        <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">add_circle</span>
+        Aracı Kaydet
+      </button>
+    </form>
+  </div>
+</div>
 
 {% endblock %}

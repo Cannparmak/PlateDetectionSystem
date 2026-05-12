@@ -174,7 +174,9 @@ class PlateDetectionPipeline:
     def _run(self, image: np.ndarray, run_ocr: bool = True) -> PipelineResult:
         t0 = time.perf_counter()
 
-        # YOLO verimliliği için max 640px'e resize (aspect ratio korunur)
+        # YOLO verimliliği için max 640px'e resize (aspect ratio korunur).
+        # imgsz=320 parametresi YOLO'nun kendi içinde 320px'e küçülterek çalışmasını sağlar;
+        # bbox koordinatları 640px uzayında döner → OCR crop'ları tam çözünürlükten alınır.
         h, w = image.shape[:2]
         if max(h, w) > 640:
             scale = 640.0 / max(h, w)

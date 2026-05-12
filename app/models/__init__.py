@@ -7,6 +7,7 @@ from app.models.subscription import Subscription
 from app.models.parking_session import ParkingSession
 from app.models.parking_config import ParkingConfig
 from app.models.parking_rate_bracket import ParkingRateBracket
+from app.models.password_reset_token import PasswordResetToken
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "ParkingSession",
     "ParkingConfig",
     "ParkingRateBracket",
+    "PasswordResetToken",
 ]
