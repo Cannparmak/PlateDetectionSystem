@@ -54,15 +54,26 @@ async def new_subscription_form(
 @router.post("/subscriptions/new")
 async def create_subscription(
     request: Request,
-    vehicle_id: int = Form(...),
-    plan_id: int = Form(...),
+    vehicle_id: int | None = Form(default=None),
+    plan_id: int | None = Form(default=None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
+    def _error(msg: str):
+        plans = db.query(SubscriptionPlan).filter(SubscriptionPlan.is_active == True).order_by(SubscriptionPlan.display_order).all()
+        return templates.TemplateResponse(request, "subscriptions/new.html", {
+            "user": user, "plans": plans, "vehicle": None, "error": msg,
+        }, status_code=400)
+
+    if not vehicle_id:
+        return _error("Lütfen listeden bir araç seçin.")
+    if not plan_id:
+        return _error("Lütfen bir plan seçin.")
+
     vehicle = db.query(Vehicle).get(vehicle_id)
     plan = db.query(SubscriptionPlan).get(plan_id)
     if not vehicle or not plan:
-        raise HTTPException(404)
+        return _error("Seçilen araç veya plan bulunamadı.")
 
     # Mevcut aktif aboneliği sonlandır
     existing = db.query(Subscription).filter(

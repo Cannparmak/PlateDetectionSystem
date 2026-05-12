@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -17,6 +17,30 @@ from src.postprocess.text_cleaner import PlateCleaner
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 templates = get_templates(Path(__file__).parent.parent / "templates")
 _cleaner = PlateCleaner()
+
+
+@router.get("/search", response_class=JSONResponse)
+async def search_vehicles(
+    q: str = "",
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_staff_user),
+):
+    query = db.query(Vehicle).options(joinedload(Vehicle.customer)).filter(Vehicle.is_active == True)
+    if q:
+        plate_q = _cleaner.clean(q)
+        query = query.filter(
+            Vehicle.plate_number.ilike(f"%{plate_q}%") |
+            Vehicle.plate_display.ilike(f"%{q}%")
+        )
+    vehicles = query.order_by(Vehicle.plate_number).limit(20).all()
+    return [
+        {
+            "id": v.id,
+            "plate_display": v.plate_display,
+            "customer_name": v.customer.full_name if v.customer else None,
+        }
+        for v in vehicles
+    ]
 
 
 @router.get("", response_class=HTMLResponse)

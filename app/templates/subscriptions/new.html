@@ -10,7 +10,7 @@
 </div>
 <p class="text-[#8c909f] text-sm ml-9" x-text="$store.app.t('sub_plans') + ' / ' + $store.app.t('veh_title')">Plan ve araç seçerek abonelik oluştur</p>
 
-<div class="max-w-3xl" x-data="{ selectedPlan: {{ vehicle.subscriptions[0].plan_id if vehicle and vehicle.subscriptions else 'null' }}, selectedVehicle: {{ vehicle.id if vehicle else 'null' }} }">
+<div class="max-w-3xl" x-data="{ selectedPlan: {{ vehicle.subscriptions[0].plan_id if vehicle and vehicle.subscriptions else 'null' }}, selectedVehicle: {{ vehicle.id if vehicle else 'null' }}, vehicleSelected: {{ 'true' if vehicle else 'false' }} }">
 
   {% if error %}
   <div class="p-4 bg-error-container/20 rounded-2xl text-error text-sm flex items-center gap-2 mb-6">
@@ -33,13 +33,71 @@
       <input type="hidden" name="vehicle_id" value="{{ vehicle.id }}"/>
     </div>
     {% else %}
-    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-3">
+    <div class="bg-surface-container rounded-3xl p-6 ghost-border space-y-3"
+         x-data="{
+           query: '',
+           results: [],
+           selected: null,
+           open: false,
+           loading: false,
+           async search(val) {
+             this.query = val;
+             this.selected = null;
+             if (val.length < 1) { this.results = []; this.open = false; return; }
+             this.loading = true;
+             const r = await fetch('/vehicles/search?q=' + encodeURIComponent(val));
+             this.results = await r.json();
+             this.open = this.results.length > 0;
+             this.loading = false;
+           },
+           pick(item) {
+             this.selected = item;
+             this.query = item.plate_display;
+             this.open = false;
+             $root.vehicleSelected = true;
+           }
+         }">
       <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest" x-text="$store.app.t('veh_plate') + ' *'">Araç Plakası *</h3>
-      <input type="text" name="vehicle_plate_search" id="vehiclePlateSearch"
-             placeholder="{{ t('veh_search') }}"
-             class="w-full bg-[#191b22] rounded-xl ghost-border px-4 py-3 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono tracking-widest uppercase"/>
-      <input type="hidden" name="vehicle_id" id="vehicleIdInput" required/>
-      <p class="text-xs text-[#8c909f]" x-text="$store.app.t('btn_search') + ' / ID'">Arama yapın ve araç seçin ya da direkt ID girin.</p>
+      <div class="relative">
+        <div class="flex items-center bg-[#191b22] rounded-xl ghost-border px-4 py-3 gap-2 focus-within:ring-1 focus-within:ring-primary/30">
+          <span class="material-symbols-outlined text-[#8c909f] text-base select-none">search</span>
+          <input type="text"
+                 :value="query"
+                 @input="search($event.target.value)"
+                 @focus="if(results.length) open = true"
+                 @keydown.escape="open = false"
+                 @keydown.arrow-down.prevent="$refs.dropdown?.querySelector('button')?.focus()"
+                 placeholder="Plaka ara… (ör: 06 BZY)"
+                 autocomplete="off"
+                 class="flex-1 bg-transparent text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none font-mono tracking-widest uppercase"/>
+          <span class="material-symbols-outlined text-[#8c909f] text-base select-none" x-show="loading">progress_activity</span>
+          <span class="material-symbols-outlined text-tertiary text-base select-none" x-show="selected && !loading">check_circle</span>
+        </div>
+
+        <!-- Dropdown -->
+        <div x-ref="dropdown"
+             x-show="open"
+             @click.outside="open = false"
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="absolute z-50 w-full mt-2 bg-[#1e1f26] rounded-2xl ghost-border overflow-hidden shadow-xl">
+          <template x-for="item in results" :key="item.id">
+            <button type="button"
+                    @click="pick(item)"
+                    @keydown.arrow-down.prevent="$el.nextElementSibling?.focus()"
+                    @keydown.arrow-up.prevent="$el.previousElementSibling?.focus()"
+                    class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container-high transition-colors text-left focus:outline-none focus:bg-surface-container-high">
+              <span class="material-symbols-outlined text-primary text-base">directions_car</span>
+              <span class="font-mono font-bold text-white tracking-widest text-sm plate-font" x-text="item.plate_display"></span>
+              <span class="text-xs text-[#8c909f] ml-auto truncate" x-text="item.customer_name || '—'"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <input type="hidden" name="vehicle_id" :value="selected ? selected.id : ''" required/>
+      <p class="text-xs text-[#8c909f]">Plaka yazarak arayın ve listeden seçin.</p>
     </div>
     {% endif %}
 
@@ -79,7 +137,9 @@
         {{ t('btn_cancel') }}
       </a>
       <button type="submit"
-              class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl hover:brightness-110 active:scale-95 transition-all glow-active">
+              :disabled="!vehicleSelected || !selectedPlan"
+              :class="(!vehicleSelected || !selectedPlan) ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110 active:scale-95 glow-active'"
+              class="flex-[2] h-12 bg-primary text-on-primary font-bold rounded-2xl transition-all">
         {{ t('btn_confirm') }}
       </button>
     </div>
