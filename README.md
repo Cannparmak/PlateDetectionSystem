@@ -1,4 +1,4 @@
-# OtoparkPro — Akıllı Otopark Yönetim Sistemi
+# CanPark — Akıllı Otopark Yönetim Sistemi
 
 Kamera görüntüsünden araç plakasını otomatik tanıyan, abonelik ve ödeme yönetimi sunan tam kapsamlı otopark yönetim sistemi. Beykoz Üniversitesi Bitirme Projesi.
 
