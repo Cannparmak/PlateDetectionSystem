@@ -286,7 +286,7 @@ def _query_vehicle_info(db: Session, plate_text: str) -> dict:
             "subscription_status": "UNKNOWN",
             "customer_name": None,
             "expires": None,
-            "can_enter": False,
+            "can_enter": True,   # Anonim araç — PlateChecker kayıt oluşturur, borç yok
             "can_exit": False,
             "is_inside": False,
             "debt_blocks_exit": False,
@@ -440,6 +440,117 @@ async def camera_entry(
         "user_type": check.user_type,
         "total_debt": check.total_debt,
         "annotated_frame": result.annotated_image_b64,
+    }
+
+
+# ------------------------------------------------------------------
+# REST — Plaka metni ile direkt giriş (YOLO yok, WS zaten doğruladı)
+# ------------------------------------------------------------------
+
+@router.post("/api/camera/entry-by-plate")
+async def camera_entry_by_plate(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_staff_user),
+):
+    """
+    Body: { "plate": "34ABC123" }
+    WebSocket + PlateVoter zaten doğruladığı için YOLO/OCR tekrar çalıştırılmaz.
+    """
+    body = await request.json()
+    plate = (body.get("plate") or "").strip()
+    if not plate:
+        raise HTTPException(400, "Plaka metni eksik.")
+
+    checker = PlateChecker(db)
+    check = checker.check_entry(plate)
+
+    gate_result = "DENIED"
+    if check.gate_signal == 1:
+        gate = GateController.get_instance()
+        opened = await gate.async_open()
+        gate_result = "OPENED" if opened else "ERROR"
+
+    set_signal(check.gate_signal)
+
+    if check.session_id:
+        from app.models.parking_session import ParkingSession
+        session = db.query(ParkingSession).get(check.session_id)
+        if session:
+            session.gate_result = gate_result
+
+    db.commit()
+
+    return {
+        "success": check.gate_signal == 1,
+        "action": check.action,
+        "message": check.message,
+        "plate_text": check.plate_text,
+        "gate_result": gate_result,
+        "customer_name": check.customer_name,
+        "subscription_info": check.subscription_info,
+        "expiry_warning": check.expiry_warning,
+        "fuzzy_match": check.fuzzy_match,
+        "fuzzy_original": check.fuzzy_original,
+        "user_type": check.user_type,
+        "total_debt": check.total_debt,
+        "annotated_frame": None,
+    }
+
+
+# ------------------------------------------------------------------
+# REST — Plaka metni ile direkt çıkış (YOLO yok, WS zaten doğruladı)
+# ------------------------------------------------------------------
+
+@router.post("/api/camera/exit-by-plate")
+async def camera_exit_by_plate(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_staff_user),
+):
+    """
+    Body: { "plate": "34ABC123" }
+    WebSocket + PlateVoter zaten doğruladığı için YOLO/OCR tekrar çalıştırılmaz.
+    """
+    body = await request.json()
+    plate = (body.get("plate") or "").strip()
+    if not plate:
+        raise HTTPException(400, "Plaka metni eksik.")
+
+    checker = PlateChecker(db)
+    check = checker.check_exit(plate)
+
+    gate_result = "DENIED"
+    if check.gate_signal == 1:
+        gate = GateController.get_instance()
+        opened = await gate.async_open()
+        gate_result = "OPENED" if opened else "ERROR"
+
+    set_signal(check.gate_signal)
+
+    if check.session_id:
+        from app.models.parking_session import ParkingSession
+        session = db.query(ParkingSession).get(check.session_id)
+        if session:
+            session.gate_result = gate_result
+
+    db.commit()
+
+    return {
+        "success": check.gate_signal == 1,
+        "action": check.action,
+        "message": check.message,
+        "plate_text": check.plate_text,
+        "gate_result": gate_result,
+        "customer_name": check.customer_name,
+        "subscription_info": check.subscription_info,
+        "fuzzy_match": check.fuzzy_match,
+        "fuzzy_original": check.fuzzy_original,
+        "user_type": check.user_type,
+        "fee_amount": check.fee_amount,
+        "total_debt": check.total_debt,
+        "bracket_name": check.bracket_name,
+        "annotated_frame": None,
     }
 
 

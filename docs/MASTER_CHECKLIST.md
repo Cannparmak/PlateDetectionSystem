@@ -631,15 +631,20 @@ POST /musteri/login      → giriş → müşteri dashboard
   - `get_current_admin` → sadece admin
   - `get_current_customer` → sadece müşteri
 
-## [ ] 4.3 Kamera Router (`app/routers/camera.py`)
+## [x] 4.3 Kamera Router (`app/routers/camera.py`)
 
 ```
-GET  /camera             → canlı kamera sayfası
-WS   /ws/stream          → WebSocket kamera akışı
-POST /api/camera/detect  → tek görüntü tespit (REST)
-POST /api/camera/entry   → giriş işlemi (plaka okuyup session aç)
-POST /api/camera/exit    → çıkış işlemi (session kapat)
+GET  /camera                       → canlı kamera sayfası
+WS   /ws/stream                    → WebSocket kamera akışı
+POST /api/camera/detect            → tek görüntü tespit (REST)
+POST /api/camera/entry             → giriş işlemi (frame tabanlı — eski)
+POST /api/camera/exit              → çıkış işlemi (frame tabanlı — eski)
+POST /api/camera/entry-by-plate    → giriş — plaka metin tabanlı (YENİ, aktif)
+POST /api/camera/exit-by-plate     → çıkış — plaka metin tabanlı (YENİ, aktif)
 ```
+
+> `/entry-by-plate` ve `/exit-by-plate` endpoint'leri 2026-05-18'de eklendi.  
+> Frontend artık yalnızca bu yeni endpoint'leri kullanıyor (frame yeniden işleme yok).
 
 ### WebSocket Akış Protokolü:
 ```json
@@ -1113,10 +1118,11 @@ GET  /api/admin/stats    → gelir, doluluk, müşteri istatistikleri
 - [x] OCR throttling — WebSocket'te 1.5s aralıkla OCR, arası YOLO-only frame
 - [x] Crop top-70% — plaka altındaki bayi/şehir yazısını OCR'dan çıkarır
 - [x] Erken çıkış: RGB confidence ≥ 0.72 ise CLAHE varyantını atla
-- [ ] **Temporal voting** — son 5 frame'de ≥2 kez okunan plakayı kabul et (one-off sahte okumaları filtreler)
+- [x] **Temporal voting** — son 5 frame'de ≥2 kez okunan plakayı kabul et (one-off sahte okumaları filtreler)
   - WebSocket döngüsünde `plate_history: deque(maxlen=5)` tut
   - Plaka metni ≥2 kez geçmişte varsa `confirmed=True` olarak işaretle
   - UI'da sadece `confirmed=True` plakaları giriş/çıkış butonu için etkinleştir
+  - **Uygulama:** Client-side `plateHistory` array (Alpine.js) — entry.html ve exit.html
 - [ ] Crop refinement — dikey %65 + yatay %10 kenar boşluğu kırp (araştırma: en etkili ikinci iyileştirme)
 - [ ] **fast-plate-ocr** (alternatif OCR motoru): `pip install fast-plate-ocr`
   - EasyOCR'dan ~3x daha hızlı, plakaya özel eğitilmiş
@@ -1314,6 +1320,84 @@ Phase 3, 4, 5 geliştirilebilir. Model hazır olunca Phase 2 ve entegrasyon tama
 
 ---
 
-**Son Güncelleme:** 2026-04-03  
+---
+
+# ============================================================
+# PHASE 9 — DONANIM ENTEGRASYONU (ESP32 + KAPÖ KONTROLÜ)
+# ============================================================
+
+> **Durum:** Tamamlandı — 2026-05-18
+
+## [x] 9.1 ESP32 WiFi Tabanlı Kapı Kontrolü
+
+**Mimari:** ESP32, seri port yerine WiFi üzerinden sunucuyu her 2 saniyede sorgular.
+
+### Donanım:
+- ESP32 Dev Board (WiFi + Bluetooth)
+- I2C LCD 16x2 (adres: 0x27)
+- Yeşil LED — GPIO4 (D4) — Giriş izni
+- Kırmızı LED — GPIO2 (D2) — Reddedildi / bekleme
+
+### Yapılandırma:
+```env
+GATE_ENABLED=false          # ESP32 WiFi tabanlı — seri port kullanılmıyor
+GATE_PORT=COM3              # Kullanılmıyor
+GATE_OPEN_DURATION=10       # Sinyalin geçerlilik süresi (saniye)
+ARDUINO_API_KEY=esp32-otopark-2024
+```
+
+**Not:** `GATE_ENABLED=false` olsa da sinyal `gate_state.py`'e yazılır — ESP32 polling ile okur.
+
+## [x] 9.2 Yeni API Endpoint'leri — Plaka Metin Tabanlı Giriş/Çıkış
+
+Manuel veya çerçeve (frame) tabanlı yaklaşım kaldırıldı. Artık zaten doğrulanmış plaka metni direkt gönderilir.
+
+| Endpoint | Yöntem | Amaç |
+|---|---|---|
+| `/api/camera/entry-by-plate` | POST | Plaka metni ile giriş — YOLO yeniden işleme yok |
+| `/api/camera/exit-by-plate` | POST | Plaka metni ile çıkış — ücret hesaplaması dahil |
+
+**Neden gerekti?**  
+Eski yöntemde frontend en son kamerayı karesini sunucuya gönderip YOLO'ya işletiyordu. WebSocket'in OCR kısıtlaması (1.5s aralık) nedeniyle bazı kareler OCR içermez; doğrulanan plaka yerine yanlış/eksik plaka kaydediliyordu.
+
+## [x] 9.3 Manuel Giriş/Çıkış Butonları Kaldırıldı
+
+`entry.html` ve `exit.html`'deki "Manuel Giriş Yap" / "Manuel Çıkış Yap" butonları silindi.  
+Bu butonlar sadece geliştirme/test amacıyla vardı.
+
+## [x] 9.4 Otomatik Tetikleme Sistemi (autoTrigger)
+
+`manualTrigger()` fonksiyonu yerine `autoTrigger(plate)` geldi:
+
+- **Abone araç:** `confirmed=true` olduğu an anında tetiklenir
+- **Misafir araç:** `guestConfirmedAt` (ilk confirmed anı) üzerinden 5 saniye bekleme, sonra tetikleme
+- **Çift tetikleme önleme:** `lastTriggeredPlate` kontrolü
+
+### Misafir LED hatası düzeltmesi:
+
+**Problem:** `plateFirstSeenAt` her OCR değişiminde sıfırlanıyordu, 5 saniye hiç dolmuyordu.  
+**Çözüm:** `guestConfirmedAt` yalnızca ilk `confirmed=true` anında set edilir, sonra değişmez.
+
+## [x] 9.5 Sinyal Penceresi Genişletildi
+
+`GATE_OPEN_DURATION` 5 saniyeden **10 saniyeye** çıkarıldı.  
+Gerekçe: ESP32 her ~2 saniyede polling yapıyor; 5 saniye yeterince güvenli marj vermiyordu.
+
+---
+
+## Arduino IDE Kütüphaneleri (ESP32 için)
+
+| Kütüphane | Yazar |
+|---|---|
+| `LiquidCrystal_I2C` | Frank de Brabander |
+| `WiFi` | Arduino (dahili) |
+| `HTTPClient` | Arduino (dahili) |
+
+**Board:** ESP32 Dev Module  
+**Detaylı ESP32 kodu ve devre şeması:** `docs/05_ARDUINO_ESP32_ENTEGRASYONU.md`
+
+---
+
+**Son Güncelleme:** 2026-05-18  
 **Hazırlayan:** Senior Software Architect  
 **Proje:** PlateDetectionSystem — Otopark Yönetim Sistemi — Bitirme Projesi
