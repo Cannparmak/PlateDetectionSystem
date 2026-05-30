@@ -236,6 +236,7 @@ async def forgot_password(
     ).first()
 
     # Güvenlik: kullanıcı bulunamasa bile aynı mesajı göster
+    mail_error = None
     if user:
         raw = _create_reset_token(db, "staff", user.id)
         base_url = str(request.base_url).rstrip("/")
@@ -247,12 +248,13 @@ async def forgot_password(
                 user_name=user.full_name if hasattr(user, "full_name") else user.email,
                 is_staff=True,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception("Şifre sıfırlama maili gönderilemedi")
+            mail_error = str(exc)
 
     return templates.TemplateResponse(request, "auth/forgot_password.html", {
         "sent": True,
-        "error": None,
+        "error": mail_error,
         "user_type": "staff",
     })
 
@@ -352,6 +354,7 @@ async def musteri_forgot_password(
         Customer.is_active == True,
     ).first()
 
+    mail_error = None
     if customer and customer.portal_password_hash:
         raw = _create_reset_token(db, "customer", customer.id)
         base_url = str(request.base_url).rstrip("/")
@@ -363,12 +366,13 @@ async def musteri_forgot_password(
                 user_name=f"{customer.first_name} {customer.last_name}",
                 is_staff=False,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception("Müşteri şifre sıfırlama maili gönderilemedi")
+            mail_error = str(exc)
 
     return templates.TemplateResponse(request, "auth/forgot_password.html", {
         "sent": True,
-        "error": None,
+        "error": mail_error,
         "user_type": "customer",
     })
 

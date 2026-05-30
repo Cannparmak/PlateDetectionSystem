@@ -7,6 +7,52 @@
   <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('admin_reports_sub')">Son 7 günün özeti</p>
 </div>
 
+<!-- Hasılat Özet Kartları -->
+<div class="grid grid-cols-3 gap-6">
+  <div class="bg-surface-container rounded-3xl p-6 ghost-border">
+    <p class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color:var(--text-subtle)" x-text="$store.app.t('rev_today')">Bugünkü Hasılat</p>
+    <p class="text-4xl font-bold font-mono" style="color:#4edea3">₺{{ "%.0f"|format(revenue.today) }}</p>
+    <div class="mt-3 pt-3 border-t border-outline-variant/10 space-y-1">
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_park')">Park</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.park_today) }}</span>
+      </div>
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_sub')">Abonelik</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.sub_today) }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="bg-surface-container rounded-3xl p-6 ghost-border">
+    <p class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color:var(--text-subtle)" x-text="$store.app.t('rev_month')">Bu Ay</p>
+    <p class="text-4xl font-bold font-mono text-primary">₺{{ "%.0f"|format(revenue.month) }}</p>
+    <div class="mt-3 pt-3 border-t border-outline-variant/10 space-y-1">
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_park')">Park</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.park_month) }}</span>
+      </div>
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_sub')">Abonelik</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.sub_month) }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="bg-surface-container rounded-3xl p-6 ghost-border">
+    <p class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color:var(--text-subtle)" x-text="$store.app.t('rev_year')">Bu Yıl</p>
+    <p class="text-4xl font-bold font-mono text-tertiary">₺{{ "%.0f"|format(revenue.year) }}</p>
+    <div class="mt-3 pt-3 border-t border-outline-variant/10 space-y-1">
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_park')">Park</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.park_year) }}</span>
+      </div>
+      <div class="flex justify-between text-xs" style="color:var(--text-subtle)">
+        <span x-text="$store.app.t('rev_sub')">Abonelik</span>
+        <span class="font-semibold" style="color:var(--text-primary)">₺{{ "%.0f"|format(revenue.sub_year) }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="grid grid-cols-12 gap-6">
 
   <!-- Daily Entries Chart -->
@@ -61,6 +107,55 @@
       <span class="text-lg font-bold text-white">{{ total_subs }}</span>
     </div>
     {% endif %}
+  </div>
+
+  <!-- 30 Günlük Hasılat Grafiği -->
+  <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border">
+    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('rev_30day')">Son 30 Gün Hasılatı</h3>
+    {% set max_rev = daily_revenue | map(attribute='total') | max if daily_revenue else 1 %}
+    {% set max_rev = max_rev if max_rev > 0 else 1 %}
+    <div class="flex items-end gap-1 h-40">
+      {% for day in daily_revenue %}
+      {% set height_pct = (day.total / max_rev * 100) | int %}
+      <div class="flex-1 flex flex-col items-center gap-1 group relative" title="{{ day.date }}: ₺{{ day.total }}">
+        <div class="w-full rounded-t-sm relative overflow-hidden" style="height: {{ [height_pct, 2] | max }}%; background:rgba(77,141,255,0.15)">
+          <div class="absolute bottom-0 left-0 right-0 rounded-t-sm" style="height:100%;background:#4d8eff;opacity:0.8"></div>
+        </div>
+        {% if loop.index % 5 == 0 %}
+        <span class="text-[9px] text-[#8c909f]">{{ day.date }}</span>
+        {% else %}
+        <span class="text-[9px] text-transparent">·</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Ödeme Yöntemi (Bu Ay) -->
+  <div class="col-span-4 bg-surface-container rounded-3xl p-6 ghost-border">
+    <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('rev_breakdown')">Gelir Dağılımı</h3>
+    {% set total_pay = cash_rev + card_rev %}
+    <div class="space-y-4">
+      {% for label_key, val, color in [('rev_cash', cash_rev, '#4edea3'), ('rev_card', card_rev, '#4d8eff')] %}
+      {% set pct = (val / total_pay * 100) | round | int if total_pay > 0 else 0 %}
+      <div>
+        <div class="flex justify-between items-center mb-1.5">
+          <span class="text-sm" style="color:var(--text-muted)" x-text="$store.app.t('{{ label_key }}')">—</span>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold" style="color:var(--text-primary)">₺{{ "%.0f"|format(val) }}</span>
+            <span class="text-xs text-[#8c909f]">({{ pct }}%)</span>
+          </div>
+        </div>
+        <div class="h-2 bg-[#0c0e14] rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all" style="width:{{ pct }}%;background:{{ color }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
+      <span class="text-xs text-[#8c909f]" x-text="$store.app.t('admin_total')">Toplam</span>
+      <span class="text-lg font-bold text-white">₺{{ "%.0f"|format(total_pay) }}</span>
+    </div>
   </div>
 
   <!-- Summary stats -->

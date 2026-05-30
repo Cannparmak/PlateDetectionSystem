@@ -25,6 +25,26 @@
   {% endfor %}
 </div>
 
+<!-- Revenue Cards -->
+<div class="grid grid-cols-3 gap-6">
+  {% set rev_cards = [
+    ('payments', revenue.today, 'rev_today', 'text-[#4edea3]', 'rgba(0,165,114,0.12)'),
+    ('calendar_month', revenue.month, 'rev_month', 'text-primary', 'bg-primary-container/10'),
+    ('bar_chart', revenue.year, 'rev_year', 'text-tertiary', 'bg-tertiary-container/10'),
+  ] %}
+  {% for icon, val, i18n_key, text_cls, bg_cls in rev_cards %}
+  <div class="bg-surface-container p-6 rounded-3xl ghost-border flex items-center gap-5 hover:bg-surface-container-high transition-colors group">
+    <div class="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform" style="background:{{ bg_cls }}">
+      <span class="material-symbols-outlined {{ text_cls }} text-3xl">{{ icon }}</span>
+    </div>
+    <div>
+      <span class="text-3xl font-bold font-mono" style="color:var(--text-primary)">₺{{ "%.0f"|format(val) }}</span>
+      <p class="text-sm font-medium mt-0.5" style="color:var(--text-subtle)" x-text="$store.app.t('{{ i18n_key }}')">—</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
 <!-- Occupancy + Config -->
 <div class="grid grid-cols-12 gap-6">
   <div class="col-span-4 self-start bg-surface-container-low rounded-3xl p-6 ghost-border flex flex-col items-center text-center">

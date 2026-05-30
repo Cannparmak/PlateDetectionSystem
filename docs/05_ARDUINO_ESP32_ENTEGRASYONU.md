@@ -1,7 +1,7 @@
 # Arduino / ESP32 Kapı Kontrol Entegrasyonu
 
-**Tarih:** 2026-05-18  
-**Durum:** Tamamlandı — Üretimde çalışıyor
+**Tarih:** 2026-05-25  
+**Durum:** Tamamlandı — Servo motor eklendi (v1.2)
 
 ---
 
@@ -34,10 +34,12 @@ ESP32, web sunucusunu belirli aralıklarla yoklayarak (polling) kapının açıl
 
 | Parça | Adet | Açıklama |
 |---|---|---|
-| ESP32 Dev Board | 1 | WiFi + Bluetooth mikrodenetleyici |
+| ESP32 Dev Board | 1 | Sistemin beyni — WiFi, HTTP polling, LED ve servo kontrolü |
+| Arduino (Uno/Nano vb.) | 1 | **Sadece güç dağıtımı** — kod çalışmaz, bilgisayarın ayrı USB portuna takılır; LCD ve servo buradan beslenir |
 | I2C LCD Ekran (16x2, 0x27) | 1 | Durum mesajlarını gösterir |
 | Yeşil LED | 1 | Giriş izni — GPIO4 (D4) |
 | Kırmızı LED | 1 | Giriş reddedildi — GPIO2 (D2) |
+| Servo Motor (SG90 / MG90S) | 1 | Kapı mekanizması — GPIO18 (D18) |
 | Direnç (220Ω) | 2 | Her LED için 1 adet |
 | Jumper Kablo | — | Bağlantı kabloları |
 
@@ -47,8 +49,7 @@ ESP32, web sunucusunu belirli aralıklarla yoklayarak (polling) kapının açıl
 
 ```
 ESP32                LCD (I2C, 0x27)
- GND ────────────── GND
- 3.3V ───────────── VCC
+ GND ────────────── GND       ← Arduino üzerinden bilgisayar USB'den beslenir
  GPIO21 (SDA) ───── SDA
  GPIO22 (SCL) ───── SCL
 
@@ -59,111 +60,69 @@ ESP32                Yeşil LED
 ESP32                Kırmızı LED
  GPIO2 ─── 220Ω ─── Anot (+)
  GND ──────────────  Katot (-)
+
+ESP32                Servo Motor (SG90/MG90S)
+ GPIO18 ──────────── Sinyal (Turuncu/Sarı)
+ GND ───────────────  GND   (Kahverengi/Siyah)
+
+Arduino (sadece güç kaynağı — kod yok)
+ VCC ────────────── Servo VCC (Kırmızı)   ← bilgisayarın ayrı USB portundan beslenir
+ VCC ────────────── LCD   VCC
+ GND ────────────── ESP32 GND  ← Ortak GND — zorunlu!
 ```
+
+> **Neden Arduino?** ESP32'nin kendi USB bağlantısının yanı sıra Arduino bilgisayarın ayrı bir USB portuna takılır; LCD, servo ve diğer elemanlar güçlerini Arduino üzerinden bu bağlantıdan alır. Arduino'ya herhangi bir kod yüklenmez, salt güç dağıtımı için kullanılır.
+>
+> **Kritik:** Arduino GND ile ESP32 GND'nin jumper ile birleştirilmesi şarttır. Ortak GND olmadan servo sinyal pini referans noktası bulamaz ve hatalı/düzensiz hareket eder.
 
 ---
 
-## 4. ESP32 Kodu (Arduino IDE)
+## 4. ESP32 Kodu (Arduino IDE) — v1.2
+
+> Güncel kaynak dosya: `bitirme_projesi_arduino_kod-v1.2.ino`
+
+**v1.2'de yapılan değişiklikler:**
+- `ESP32Servo.h` kütüphanesi eklendi
+- `PIN_SERVO = 18` (D18) tanımlandı
+- `Servo kapiServo` nesnesi ve `bool kapiAcik` durum flag'i eklendi
+- `setGreen()` → servo 0°'dan 90°'ye döner (kapı açılır)
+- `setRed()` → servo 90°'dan 0°'ye döner (kapı kapanır)
+- `kapiAcik` flag'i sayesinde servo sadece durum değiştiğinde hareket eder; her 2 saniyede titremez
+- Setup içinde sunucu ping mekanizması eklendi (15 deneme, yanıt gelmezse devam eder)
+- WiFi bağlantı kopukluğunda otomatik yeniden bağlanma iyileştirildi
+
+**Temel yapı özeti:**
 
 ```cpp
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <ESP32Servo.h>
 
-// ── Yapılandırma ──────────────────────────────────────────
-const char* WIFI_SSID     = "WiFi_Aginizin_Adi";
-const char* WIFI_PASSWORD = "WiFi_Sifreniz";
-const char* SERVER_URL    = "http://192.168.x.x:8000/api/arduino/state";
-const char* API_KEY       = "esp32-otopark-2024";
+const int PIN_SERVO  = 18;
+const int SERVO_KAPALI = 0;   // Kapalı pozisyon
+const int SERVO_ACIK   = 90;  // Açık pozisyon
 
-const int PIN_GREEN = 4;   // D4 — Yeşil LED
-const int PIN_RED   = 2;   // D2 — Kırmızı LED
-const int POLL_MS   = 2000; // Sunucuyu her 2 saniyede sorgula
+Servo kapiServo;
+bool  kapiAcik = false;
 
-// ── Nesneler ──────────────────────────────────────────────
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-HTTPClient http;
-
-// ── Setup ─────────────────────────────────────────────────
-void setup() {
-  Serial.begin(115200);
-
-  pinMode(PIN_GREEN, OUTPUT);
-  pinMode(PIN_RED, OUTPUT);
-  digitalWrite(PIN_GREEN, LOW);
-  digitalWrite(PIN_RED, HIGH);  // Başlangıçta kırmızı
-
-  Wire.begin(21, 22);
-  lcd.init();
-  lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("OtoparkPro");
-  lcd.setCursor(0, 1);
-  lcd.print("Baglanıyor...");
-
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+void setGreen() {
+  // LED yeşil yap
+  if (!kapiAcik) {
+    kapiServo.write(SERVO_ACIK);   // 90° — kapı açılır
+    kapiAcik = true;
   }
-
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Baglandi!");
-  lcd.setCursor(0, 1);
-  lcd.print(WiFi.localIP());
-  delay(2000);
 }
 
-// ── Loop ──────────────────────────────────────────────────
-void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
-    lcd.clear();
-    lcd.print("WiFi yok!");
-    delay(POLL_MS);
-    return;
+void setRed() {
+  // LED kırmızı yap
+  if (kapiAcik) {
+    kapiServo.write(SERVO_KAPALI); // 0° — kapı kapanır
+    kapiAcik = false;
   }
+}
 
-  http.begin(SERVER_URL);
-  http.addHeader("X-API-Key", API_KEY);
-
-  int code = http.GET();
-
-  if (code == 200) {
-    String body = http.getString();
-    body.trim();
-
-    if (body == "1") {
-      // Yeşil — Kapı aç
-      digitalWrite(PIN_GREEN, HIGH);
-      digitalWrite(PIN_RED, LOW);
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("GECIS IZNI VAR");
-      lcd.setCursor(0, 1);
-      lcd.print("Hos Geldiniz!");
-    } else {
-      // Kırmızı — Bekleme / Reddedildi
-      digitalWrite(PIN_GREEN, LOW);
-      digitalWrite(PIN_RED, HIGH);
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("BEKLENIYOR...");
-      lcd.setCursor(0, 1);
-      lcd.print("Plaka Okunu.");
-    }
-  } else {
-    // Sunucuya ulaşılamadı
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("SUNUCU HATASI");
-    lcd.setCursor(0, 1);
-    lcd.print("Kod: " + String(code));
-  }
-
-  http.end();
-  delay(POLL_MS);
+void setup() {
+  kapiServo.attach(PIN_SERVO);
+  kapiServo.write(SERVO_KAPALI);  // Başlangıç: kapalı
+  // ... WiFi, LCD, ping ...
 }
 ```
 
@@ -339,6 +298,7 @@ Arduino IDE'de **Library Manager**'dan şunları yükle:
 | Kütüphane | Yazar | Amaç |
 |---|---|---|
 | `LiquidCrystal_I2C` | Frank de Brabander | I2C LCD kontrolü |
+| `ESP32Servo` | Kevin Harrington | ESP32 için PWM servo kontrolü |
 | `WiFi` | Arduino | Dahili — ESP32'de zaten var |
 | `HTTPClient` | Arduino | Dahili — ESP32'de zaten var |
 
@@ -349,14 +309,17 @@ Arduino IDE'de **Library Manager**'dan şunları yükle:
 
 ## 10. LCD Durum Mesajları
 
-| Durum | LCD Satır 1 | LCD Satır 2 |
-|---|---|---|
-| Bağlanıyor | `OtoparkPro` | `Baglanıyor...` |
-| Bağlandı (2sn) | `Baglandi!` | IP adresi |
-| Normal bekleme | `BEKLENIYOR...` | `Plaka Okunu.` |
-| Yeşil sinyal | `GECIS IZNI VAR` | `Hos Geldiniz!` |
-| Sunucu hatası | `SUNUCU HATASI` | `Kod: <HTTP kodu>` |
-| WiFi koptu | `WiFi yok!` | — |
+| Durum | LCD Satır 1 | LCD Satır 2 | Servo |
+|---|---|---|---|
+| Başlangıç | `Sisteme` | `baglaniliyor...` | 0° (kapalı) |
+| WiFi bağlandı (1.5sn) | `WiFi Baglandi` | IP adresi | 0° |
+| Sunucu bekleniyor | `Sunucu` | `bekleniyor...` | 0° |
+| Hazır / bekleme | `Sistem Hazir` | `Gecis: KAPALI` | 0° (kapalı) |
+| Yeşil sinyal | `KAPI ACIK` | `Gecebilirsiniz` | 90° (açık) |
+| Kırmızı sinyal | `KAPI KAPALI` | `Gecemezsiniz` | 0° (kapalı) |
+| API Key hatası | `API Key Hatasi` | `Kod: 401` | 0° |
+| Sunucu hatası | `Sunucu Hatasi!` | `Kod: <HTTP kodu>` | 0° |
+| WiFi koptu | `WiFi Kesildi!` | `Yeniden bagl.` | 0° |
 
 ---
 
@@ -370,11 +333,16 @@ Arduino IDE'de **Library Manager**'dan şunları yükle:
 | Yanlış plaka kaydı | Eski frame-tabanlı kod | Bu döküman kapsamındaki endpoint'lere geçildi |
 | Misafir LED yanmıyor | `plateFirstSeenAt` sıfırlanıyor | `guestConfirmedAt` kullanıldığından bu sorun çözüldü |
 | Çift kayıt | `lastTriggeredPlate` kontrolü | Başarılı tetiklemeden sonra plaka sıfırlanmıyor — normal davranış |
+| Servo hareket etmiyor | Güç hattı bağlı değil | Servo VCC'yi Arduino üzerinden bilgisayar USB'sine bağla; ESP32 GND ile Arduino GND ortak olmalı |
+| Servo titriyor / sallanıyor | Her poll'da `write()` çağrılıyor | `kapiAcik` flag'i bunu önler; kodu v1.2 ile güncelle |
+| Servo yanlış açıya gidiyor | `SERVO_ACIK` / `SERVO_KAPALI` sabit yanlış | Fiziksel mekanizmaya göre 0 ve 90 değerlerini ayarla |
+| `ESP32Servo.h` bulunamıyor | Kütüphane yüklü değil | Arduino IDE → Library Manager → "ESP32Servo" ara ve yükle |
 
 ---
 
-**Son Güncelleme:** 2026-05-18  
+**Son Güncelleme:** 2026-05-25  
 **İlgili Dosyalar:**  
+- `bitirme_projesi_arduino_kod-v1.2.ino` — güncel ESP32 kodu (servo dahil)  
 - `app/routers/camera.py` — `/api/camera/entry-by-plate`, `/api/camera/exit-by-plate`  
 - `app/routers/arduino.py` — `/api/arduino/state`, `/api/arduino/ping`  
 - `app/services/gate_state.py` — sinyal bellek yönetimi  

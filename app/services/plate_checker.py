@@ -272,7 +272,8 @@ class PlateChecker:
             existing_debt    = self._get_total_debt(vehicle.id)
             threshold        = self._get_debt_threshold()
             current_duration = int((datetime.utcnow() - active_session.entry_time).total_seconds() / 60)
-            current_fee      = self._fee_calc.calculate(current_duration)
+            # Admin tarafından önceden ödendiyse mevcut oturumu tekrar sayma
+            current_fee      = 0.0 if active_session.is_paid else self._fee_calc.calculate(current_duration)
             total_with_fee   = round(existing_debt + current_fee, 2)
 
             if total_with_fee >= threshold:

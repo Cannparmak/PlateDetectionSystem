@@ -198,12 +198,12 @@ Admin panelinden değiştirilebilir olacak. Varsayılan değerler:
 | # | Dilim Adı | Süre (dakika) | Ücret (₺) |
 |---|---|---|---|
 | 1 | Ücretsiz (tolerans) | 0 – 30 dk | ₺0 |
-| 2 | İlk 1 Saat | 30 dk – 1 saat | ₺50 |
-| 3 | 1–2 Saat | 1 saat – 2 saat | ₺80 |
-| 4 | 2–4 Saat | 2 saat – 4 saat | ₺120 |
-| 5 | 4–8 Saat | 4 saat – 8 saat | ₺180 |
-| 6 | 8–12 Saat | 8 saat – 12 saat | ₺250 |
-| 7 | Günlük Tavan | 12 saat – 24 saat | ₺350 |
+| 2 | İlk 1 Saat | 30 dk – 1 saat | ₺100 |
+| 3 | 1–2 Saat | 1 saat – 2 saat | ₺150 |
+| 4 | 2–4 Saat | 2 saat – 4 saat | ₺220 |
+| 5 | 4–8 Saat | 4 saat – 8 saat | ₺320 |
+| 6 | 8–12 Saat | 8 saat – 12 saat | ₺420 |
+| 7 | Günlük Tavan | 12 saat – 24 saat | ₺550 |
 
 **24 saati aşarsa:** Her gün için günlük tavan (₺350) çarpı gün sayısı.
 
@@ -348,12 +348,12 @@ class ParkingRateBracket(Base):
 ```python
 brackets = [
     {"name": "Ücretsiz",    "min_minutes": 0,    "max_minutes": 30,   "price": 0,   "display_order": 1},
-    {"name": "İlk 1 Saat",  "min_minutes": 30,   "max_minutes": 60,   "price": 50,  "display_order": 2},
-    {"name": "1–2 Saat",    "min_minutes": 60,   "max_minutes": 120,  "price": 80,  "display_order": 3},
-    {"name": "2–4 Saat",    "min_minutes": 120,  "max_minutes": 240,  "price": 120, "display_order": 4},
-    {"name": "4–8 Saat",    "min_minutes": 240,  "max_minutes": 480,  "price": 180, "display_order": 5},
-    {"name": "8–12 Saat",   "min_minutes": 480,  "max_minutes": 720,  "price": 250, "display_order": 6},
-    {"name": "Günlük Tavan","min_minutes": 720,  "max_minutes": 1440, "price": 350, "display_order": 7},
+    {"name": "İlk 1 Saat",  "min_minutes": 30,   "max_minutes": 60,   "price": 100, "display_order": 2},
+    {"name": "1–2 Saat",    "min_minutes": 60,   "max_minutes": 120,  "price": 150, "display_order": 3},
+    {"name": "2–4 Saat",    "min_minutes": 120,  "max_minutes": 240,  "price": 220, "display_order": 4},
+    {"name": "4–8 Saat",    "min_minutes": 240,  "max_minutes": 480,  "price": 320, "display_order": 5},
+    {"name": "8–12 Saat",   "min_minutes": 480,  "max_minutes": 720,  "price": 420, "display_order": 6},
+    {"name": "Günlük Tavan","min_minutes": 720,  "max_minutes": 1440, "price": 550, "display_order": 7},
 ]
 ```
 

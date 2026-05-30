@@ -45,9 +45,15 @@
           {% for s in sessions %}
           <tr class="hover:bg-surface-container-high transition-colors" x-data="{ open: false }">
             <td class="px-6 py-3">
-              <p class="plate-font font-bold" style="color:var(--text-primary)">
-                {{ s.vehicle.plate_display if s.vehicle else '?' }}
-              </p>
+              <div class="flex items-center gap-2">
+                <p class="plate-font font-bold" style="color:var(--text-primary)">
+                  {{ s.vehicle.plate_display if s.vehicle else '?' }}
+                </p>
+                {% if s.still_inside %}
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider"
+                      style="background:rgba(255,180,0,0.15);color:#ffb400;border:1px solid rgba(255,180,0,0.3)">İçeride</span>
+                {% endif %}
+              </div>
               {% if s.vehicle and s.vehicle.customer %}
               <p class="text-[10px]" style="color:var(--text-subtle)">{{ s.vehicle.customer.full_name }}</p>
               {% else %}
@@ -62,6 +68,8 @@
               {% if s.exit_time %}
               <p class="text-xs" style="color:var(--text-primary)">{{ s.exit_time.strftime('%d.%m.%Y') }}</p>
               <p class="text-[10px]" style="color:var(--text-subtle)">{{ s.exit_time.strftime('%H:%M') }}</p>
+              {% elif s.still_inside %}
+              <p class="text-xs font-semibold" style="color:#ffb400">Park halinde</p>
               {% else %}
               <p class="text-xs" style="color:var(--text-subtle)">—</p>
               {% endif %}
@@ -79,6 +87,9 @@
             </td>
             <td class="px-4 py-3 text-right">
               <p class="text-base font-bold text-error">₺{{ "%.0f"|format(s.fee_amount) }}</p>
+              {% if s.still_inside %}
+              <p class="text-[9px]" style="color:var(--text-subtle)">Anlık hesap</p>
+              {% endif %}
             </td>
             <td class="px-4 py-3">
               <!-- Payment button with dropdown -->

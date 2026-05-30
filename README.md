@@ -108,7 +108,7 @@ Uygulama `http://localhost:8000` adresinde çalışır.
 
 | Rol | E-posta | Şifre |
 |---|---|---|
-| Admin | admin@gmail.com | Admin123 |
+| Admin | mcanparmak@gmail.com | Admin123 |
 
 > Canlıya geçmeden önce `.env` içindeki `SECRET_KEY` ve şifreleri mutlaka değiştir.
 

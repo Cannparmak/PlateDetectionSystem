@@ -158,7 +158,7 @@ async def send_password_reset_email(
     is_staff: bool = True,
 ) -> None:
     """Şifre sıfırlama mailini thread pool'da gönderir (event loop'u bloklamaz)."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     await loop.run_in_executor(
         None,
         _send_sync,

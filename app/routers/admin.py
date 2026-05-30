@@ -30,8 +30,12 @@ async def admin_dashboard(
     user: User = Depends(require_admin),
 ):
     from datetime import datetime, timedelta
+    from sqlalchemy import func as sqlfunc
+
     now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start  = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_start   = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
     stats = {
         "total_customers": db.query(Customer).filter(Customer.is_active == True).count(),
@@ -51,6 +55,29 @@ async def admin_dashboard(
         ).count(),
     }
 
+    def _park_rev(start):
+        return db.query(
+            sqlfunc.coalesce(sqlfunc.sum(ParkingSession.fee_amount), 0)
+        ).filter(
+            ParkingSession.is_paid == True,
+            ParkingSession.fee_amount.isnot(None),
+            ParkingSession.paid_at >= start,
+        ).scalar() or 0.0
+
+    def _sub_rev(start):
+        return db.query(
+            sqlfunc.coalesce(sqlfunc.sum(Subscription.total_paid), 0)
+        ).filter(
+            Subscription.total_paid > 0,
+            Subscription.created_at >= start,
+        ).scalar() or 0.0
+
+    revenue = {
+        "today":  round(_park_rev(today_start) + _sub_rev(today_start), 2),
+        "month":  round(_park_rev(month_start) + _sub_rev(month_start), 2),
+        "year":   round(_park_rev(year_start)  + _sub_rev(year_start),  2),
+    }
+
     config = db.query(ParkingConfig).first()
     recent_sessions = (
         db.query(ParkingSession)
@@ -62,7 +89,9 @@ async def admin_dashboard(
 
     return templates.TemplateResponse(request, "admin/dashboard.html", {
         "user": user,
-        "stats": stats, "config": config,
+        "stats": stats,
+        "revenue": revenue,
+        "config": config,
         "recent_sessions": recent_sessions,
     })
 
@@ -124,13 +153,18 @@ async def reports(
     user: User = Depends(require_admin),
 ):
     from datetime import datetime, timedelta
-    now = datetime.utcnow()
+    from sqlalchemy import func as sqlfunc
+
+    now         = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_start  = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
     daily_entries = []
     for i in range(6, -1, -1):
         day = now - timedelta(days=i)
         day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day.replace(hour=23, minute=59, second=59)
+        day_end   = day.replace(hour=23, minute=59, second=59)
         count = db.query(ParkingSession).filter(
             ParkingSession.entry_time >= day_start,
             ParkingSession.entry_time <= day_end,
@@ -146,10 +180,82 @@ async def reports(
         ).count()
         plan_stats.append({"name": plan.name, "count": count})
 
+    # ── Hasılat hesapları ──────────────────────────────────────────────
+    def _park_rev(start, end=None):
+        q = db.query(sqlfunc.coalesce(sqlfunc.sum(ParkingSession.fee_amount), 0)).filter(
+            ParkingSession.is_paid == True,
+            ParkingSession.fee_amount.isnot(None),
+            ParkingSession.paid_at >= start,
+        )
+        if end:
+            q = q.filter(ParkingSession.paid_at <= end)
+        return float(q.scalar() or 0)
+
+    def _sub_rev(start, end=None):
+        q = db.query(sqlfunc.coalesce(sqlfunc.sum(Subscription.total_paid), 0)).filter(
+            Subscription.total_paid > 0,
+            Subscription.created_at >= start,
+        )
+        if end:
+            q = q.filter(Subscription.created_at <= end)
+        return float(q.scalar() or 0)
+
+    park_today  = round(_park_rev(today_start), 2)
+    park_month  = round(_park_rev(month_start), 2)
+    park_year   = round(_park_rev(year_start),  2)
+    sub_today   = round(_sub_rev(today_start),  2)
+    sub_month   = round(_sub_rev(month_start),  2)
+    sub_year    = round(_sub_rev(year_start),   2)
+
+    revenue = {
+        "today":       round(park_today + sub_today, 2),
+        "month":       round(park_month + sub_month, 2),
+        "year":        round(park_year  + sub_year,  2),
+        "park_today":  park_today,
+        "park_month":  park_month,
+        "park_year":   park_year,
+        "sub_today":   sub_today,
+        "sub_month":   sub_month,
+        "sub_year":    sub_year,
+    }
+
+    # Son 30 günlük günlük hasılat (bar chart için)
+    daily_revenue = []
+    for i in range(29, -1, -1):
+        day       = now - timedelta(days=i)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end   = day.replace(hour=23, minute=59, second=59)
+        park = _park_rev(day_start, day_end)
+        sub  = _sub_rev(day_start, day_end)
+        daily_revenue.append({
+            "date":  day.strftime("%d.%m"),
+            "total": round(park + sub, 2),
+            "park":  park,
+            "sub":   sub,
+        })
+
+    # Ödeme yöntemi dağılımı (bu ay)
+    cash_rev = db.query(sqlfunc.coalesce(sqlfunc.sum(ParkingSession.fee_amount), 0)).filter(
+        ParkingSession.is_paid == True,
+        ParkingSession.fee_amount.isnot(None),
+        ParkingSession.paid_at >= month_start,
+        ParkingSession.payment_method == "nakit",
+    ).scalar() or 0
+    card_rev = db.query(sqlfunc.coalesce(sqlfunc.sum(ParkingSession.fee_amount), 0)).filter(
+        ParkingSession.is_paid == True,
+        ParkingSession.fee_amount.isnot(None),
+        ParkingSession.paid_at >= month_start,
+        ParkingSession.payment_method == "kredi_karti",
+    ).scalar() or 0
+
     return templates.TemplateResponse(request, "admin/reports.html", {
         "user": user,
         "daily_entries": daily_entries,
         "plan_stats": plan_stats,
+        "revenue": revenue,
+        "daily_revenue": daily_revenue,
+        "cash_rev": round(float(cash_rev), 2),
+        "card_rev": round(float(card_rev), 2),
     })
 
 
@@ -160,9 +266,15 @@ async def admin_debts(
     db: Session = Depends(get_db),
     user: User = Depends(require_admin),
 ):
-    """Ödenmemiş misafir borçları listesi."""
-    per_page = 10
-    base_q = (
+    """Ödenmemiş misafir borçları listesi — içeridekiler dahil."""
+    from datetime import datetime as dt
+    from app.services.fee_calculator import FeeCalculator
+
+    fee_calc = FeeCalculator(db)
+    now = dt.utcnow()
+
+    # Çıkış yapmış, ödenmemiş oturumlar
+    exited = (
         db.query(ParkingSession)
         .filter(
             ParkingSession.is_guest == True,
@@ -170,18 +282,60 @@ async def admin_debts(
             ParkingSession.fee_amount.isnot(None),
             ParkingSession.is_active == False,
         )
-    )
-    all_sessions = base_q.with_entities(ParkingSession.fee_amount).all()
-    total_unpaid = round(sum(s.fee_amount for s in all_sessions if s.fee_amount), 2)
-    total = base_q.count()
-    sessions = (
-        base_q
         .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
-        .order_by(ParkingSession.exit_time.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
         .all()
     )
+
+    # Hâlâ içerideki misafir araçlar — anlık ücret hesapla (DB'ye yazmadan)
+    active_raw = (
+        db.query(ParkingSession)
+        .filter(
+            ParkingSession.is_guest == True,
+            ParkingSession.is_active == True,
+            ParkingSession.is_paid == False,
+        )
+        .options(joinedload(ParkingSession.vehicle).joinedload(Vehicle.customer))
+        .all()
+    )
+
+    # Autoflush'tan kaçınmak için tarayıcıyı ayır, hesapları ayrı dict'te tut
+    computed: dict[int, dict] = {}
+    db.autoflush = False
+    try:
+        for s in active_raw:
+            duration = max(1, int((now - s.entry_time).total_seconds() / 60))
+            fee = fee_calc.calculate(duration)
+            computed[s.id] = {"duration_minutes": duration, "fee_amount": fee}
+    finally:
+        db.autoflush = True
+
+    # Wrapper: template s.fee_amount / s.duration_minutes / s.still_inside ile çalışır
+    class _SessionProxy:
+        def __init__(self, session: ParkingSession, extra: dict, still_inside: bool):
+            self._s = session
+            self._extra = extra
+            self.still_inside = still_inside
+
+        def __getattr__(self, name: str):
+            if name in self._extra:
+                return self._extra[name]
+            return getattr(self._s, name)
+
+    rows: list = []
+    for s in exited:
+        rows.append(_SessionProxy(s, {}, still_inside=False))
+    for s in active_raw:
+        extra = computed[s.id]
+        if extra["fee_amount"] > 0:
+            rows.append(_SessionProxy(s, extra, still_inside=True))
+
+    rows.sort(key=lambda p: p.fee_amount or 0, reverse=True)
+
+    total_unpaid = round(sum(p.fee_amount for p in rows if p.fee_amount), 2)
+    total = len(rows)
+    per_page = 10
+    sessions = rows[(page - 1) * per_page: page * per_page]
+
     return templates.TemplateResponse(request, "admin/debts.html", {
         "user": user,
         "sessions": sessions,
@@ -202,9 +356,19 @@ async def mark_debt_paid(
 ):
     """Seçilen borç oturumunu ödenmiş olarak işaretle."""
     from datetime import datetime as dt
+    from app.services.fee_calculator import FeeCalculator
+
     session = db.query(ParkingSession).get(session_id)
     if not session or not session.is_guest or session.is_paid:
         raise HTTPException(400, "Gecersiz istek.")
+
+    # Araç hâlâ içerideyse anlık ücreti hesapla ve kaydet
+    if session.is_active and session.fee_amount is None:
+        now = dt.utcnow()
+        duration = max(1, int((now - session.entry_time).total_seconds() / 60))
+        session.fee_amount = FeeCalculator(db).calculate(duration)
+        session.duration_minutes = duration
+
     session.is_paid = True
     session.paid_at = dt.utcnow()
     session.payment_method = payment_method
