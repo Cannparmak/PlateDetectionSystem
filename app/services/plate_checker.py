@@ -100,6 +100,18 @@ class PlateChecker:
         fuzzy_match   = False
         fuzzy_original: str | None = None
 
+        # Geçersiz il kodlu sahte Türk plakası → doğrudan reddet
+        if self._cleaner.is_fake_tr(plate):
+            logger.warning("Sahte TR plakasi reddedildi: %s", plate)
+            return CheckResult(
+                plate_text=plate,
+                vehicle_found=False,
+                subscription_active=False,
+                action="DENY",
+                message=f"{plate} — Gecersiz il kodu. Sahte plaka suphelisi, giris reddedildi.",
+                gate_signal=0,
+            )
+
         vehicle, fuzzy_match, fuzzy_original = self._resolve_vehicle(plate)
 
         if vehicle:

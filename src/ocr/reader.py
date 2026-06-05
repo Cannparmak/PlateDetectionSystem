@@ -313,13 +313,12 @@ class PlateOCR:
                     logger.debug("Dual-model fallback hatası: %s", e)
 
         # ── Metin temizleme ve doğrulama ─────────────────────────────────
-        cleaned = cleaner.clean(raw_text)
-        fixed   = cleaner.fix_ocr_errors(cleaned)
-        valid, fmt = cleaner.validate(fixed)
+        # normalize(): TR adayı → fix_ocr_errors + karşılaştır; yabancı → doğrudan validate
+        plate_text, valid, fmt = cleaner.normalize(raw_text)
 
         return OCRResult(
             text=raw_text,
-            cleaned_text=fixed,
+            cleaned_text=plate_text,
             confidence=confidence,
             format_valid=valid,
             plate_format=fmt,

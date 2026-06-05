@@ -38,9 +38,9 @@ class PlateCleaner:
     # ------------------------------------------------------------------
     FORMATS: dict[str, str] = {
         # ── Türkiye ──────────────────────────────────────────────────
-        # 34ABC1234 | 06AB123 | 81YZ99
-        # [il kodu 01-81][1-3 harf][2-4 rakam]
-        "TR": r"^[0-9]{2}[ABCDEFGHJKLMNPRSTUVYZ]{1,3}[0-9]{2,4}$",
+        # 1-2 harf → 2-4 rakam  örn: 34A1234, 34AB1234
+        # 3 harf   → 2-3 rakam  örn: 34ABC12, 34ABC123  (3+4 kombinasyonu yok)
+        "TR": r"^[0-9]{2}(?:[ABCDEFGHJKLMNPRSTUVYZ]{1,2}[0-9]{2,4}|[ABCDEFGHJKLMNPRSTUVYZ]{3}[0-9]{2,3})$",
 
         # ── İngiltere (post-2001) ─────────────────────────────────────
         # AB12CDE
@@ -152,6 +152,57 @@ class PlateCleaner:
     # Doğrulama
     # ------------------------------------------------------------------
 
+    # Format öncelik sırası — GENERIC ve UNKNOWN en düşük
+    _FORMAT_PRIORITY: dict[str, int] = {
+        "TR": 10, "UK": 8, "FR": 8, "IT": 8, "ES": 8, "DE": 8, "PL": 8,
+        "NL": 6, "GENERIC": 2, "UNKNOWN": 0,
+    }
+
+    def normalize(self, raw: str) -> tuple[str, bool, str]:
+        """
+        Ham OCR metnini akıllıca normalize eder ve doğrular.
+
+        TR adayı (ilk 2 karakter rakam/rakama dönüşebilir) ise fix_ocr_errors
+        uygulanır ve her iki sonuç karşılaştırılarak en iyi format kazanır.
+        Yabancı plakalar (K9501AT gibi) doğrudan temizlenip doğrulanır.
+
+        Returns:
+            (plate_text, format_valid, plate_format)
+        """
+        cleaned = self.clean(raw)
+        if not cleaned:
+            return "", False, "UNKNOWN"
+
+        if self._is_tr_candidate(cleaned):
+            fixed = self.fix_ocr_errors(cleaned)
+            valid_f, fmt_f = self.validate(fixed)
+            valid_c, fmt_c = self.validate(cleaned)
+
+            # TR olarak doğrulandıysa fix kazanır
+            if valid_f and fmt_f == "TR":
+                return fixed, valid_f, fmt_f
+            # Sadece temizlenmiş hali doğrulanıyorsa onu kullan
+            if valid_c and not valid_f:
+                return cleaned, valid_c, fmt_c
+            # Her ikisi de doğrulanıyorsa daha yüksek öncelikli formatı seç
+            if valid_f and valid_c:
+                p_f = self._FORMAT_PRIORITY.get(fmt_f, 0)
+                p_c = self._FORMAT_PRIORITY.get(fmt_c, 0)
+                if p_c > p_f:
+                    return cleaned, valid_c, fmt_c
+            return fixed, valid_f, fmt_f
+        else:
+            valid, fmt = self.validate(cleaned)
+            return cleaned, valid, fmt
+
+    def _is_tr_candidate(self, text: str) -> bool:
+        """İlk iki karakterin rakam veya rakama dönüştürülebilir olup olmadığını kontrol eder."""
+        if len(text) < 2:
+            return False
+        def _digit_like(ch: str) -> bool:
+            return ch.isdigit() or ch in self._LETTER_TO_DIGIT
+        return _digit_like(text[0]) and _digit_like(text[1])
+
     def validate(self, text: str) -> tuple[bool, str]:
         """
         Temizlenmiş metni bilinen plaka formatlarına karşı doğrular.
@@ -170,6 +221,22 @@ class PlateCleaner:
                 return True, fmt_name
 
         return False, "UNKNOWN"
+
+    # TR plaka şekli — il kodu kontrolü olmadan (sadece yapısal)
+    _TR_SHAPE_RE = re.compile(
+        r'^[0-9]{2}[ABCDEFGHJKLMNPRSTUVYZ]{1,3}[0-9]{2,4}$'
+    )
+
+    def is_fake_tr(self, text: str) -> bool:
+        """
+        TR plaka yapısına (rakam-harf-rakam) uyan ama il kodu geçersiz
+        olan (82-99 arası) plakaları tespit eder.
+
+        Örnek: "84ABC332" → True  (82-99 geçersiz)
+                "34ABC1234" → False (geçerli TR)
+                "K9501AT"  → False (TR şekline uymuyor)
+        """
+        return bool(self._TR_SHAPE_RE.fullmatch(text)) and not self._validate_tr_city(text)
 
     @staticmethod
     def _validate_tr_city(text: str) -> bool:
