@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,6 +15,8 @@ from app.models.parking_session import ParkingSession
 from app.models.subscription import Subscription
 from app.models.vehicle import Vehicle
 from app.models.user import User
+from app.routers.customers import PHONE_COUNTRY_CODES, _build_phone, _parse_stored_phone
+from app.services.auth_service import hash_password, verify_password
 from src.postprocess.text_cleaner import PlateCleaner
 
 router = APIRouter(tags=["dashboard"])
@@ -103,6 +106,67 @@ async def musteri_add_vehicle(
     return RedirectResponse("/musteri/dashboard", status_code=302)
 
 
+@router.post("/musteri/vehicles/{vehicle_id}/edit")
+async def musteri_edit_vehicle(
+    vehicle_id: int,
+    plate_display: str = Form(...),
+    vehicle_type: str = Form(default="otomobil"),
+    brand: str = Form(default=""),
+    model: str = Form(default=""),
+    color: str = Form(default=""),
+    db: Session = Depends(get_db),
+    customer: Customer = Depends(get_current_customer),
+):
+    vehicle = (
+        db.query(Vehicle)
+        .options(joinedload(Vehicle.subscriptions))
+        .filter(
+            Vehicle.id == vehicle_id,
+            Vehicle.customer_id == customer.id,
+            Vehicle.is_active == True,
+        )
+        .first()
+    )
+    if not vehicle:
+        return RedirectResponse("/musteri/dashboard", status_code=302)
+
+    # Aktif aboneliği olan araç düzenlenemez — abonelik plakaya bağlıdır
+    if any(s.is_active for s in vehicle.subscriptions):
+        return RedirectResponse(
+            "/musteri/dashboard?vehicle_error="
+            + quote_plus("Aktif aboneliği olan aracın bilgileri değiştirilemez."),
+            status_code=302,
+        )
+
+    plate_number = _cleaner.clean(plate_display)
+    valid, fmt = _cleaner.validate(plate_number)
+    if not plate_number or not valid or fmt != "TR":
+        return RedirectResponse(
+            "/musteri/dashboard?vehicle_error=Geçersiz+Türk+plakası.+Beklenen+format%3A+34+ABC+1234",
+            status_code=302,
+        )
+
+    # Aynı plaka başka bir araçta kayıtlı mı
+    exists = db.query(Vehicle).filter(
+        Vehicle.plate_number == plate_number,
+        Vehicle.id != vehicle_id,
+    ).first()
+    if exists:
+        return RedirectResponse(
+            f"/musteri/dashboard?vehicle_error={quote_plus(plate_display.strip() + ' plakası zaten sistemde kayıtlı')}",
+            status_code=302,
+        )
+
+    vehicle.plate_number = plate_number
+    vehicle.plate_display = _cleaner.to_display(plate_number)
+    vehicle.vehicle_type = vehicle_type
+    vehicle.brand = brand.strip() or None
+    vehicle.model = model.strip() or None
+    vehicle.color = color.strip() or None
+    db.commit()
+    return RedirectResponse("/musteri/dashboard", status_code=302)
+
+
 @router.post("/musteri/vehicles/{vehicle_id}/remove")
 async def musteri_remove_vehicle(
     vehicle_id: int,
@@ -131,3 +195,93 @@ async def musteri_remove_vehicle(
     vehicle.is_active = False
     db.commit()
     return RedirectResponse("/musteri/dashboard", status_code=302)
+
+
+# ---------------------------------------------------------------------------
+# Müşteri profil — kendi bilgilerini ve şifresini günceller
+# ---------------------------------------------------------------------------
+
+@router.get("/musteri/profile", response_class=HTMLResponse)
+async def musteri_profile(
+    request: Request,
+    customer: Customer = Depends(get_current_customer),
+    error: str = "",
+    success: str = "",
+):
+    selected_code, phone_local = _parse_stored_phone(customer.phone or "")
+    return templates.TemplateResponse(request, "dashboard/musteri_profile.html", {
+        "customer": customer,
+        "phone_codes": PHONE_COUNTRY_CODES,
+        "selected_code": selected_code,
+        "phone_local": phone_local,
+        "error": error,
+        "success": success,
+    })
+
+
+@router.post("/musteri/profile")
+async def musteri_update_profile(
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    phone_code: str = Form(default="+90"),
+    phone: str = Form(...),
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+    customer: Customer = Depends(get_current_customer),
+):
+    normalized_phone, phone_err = _build_phone(phone_code, phone.strip())
+    if phone_err:
+        return RedirectResponse(f"/musteri/profile?error={quote_plus(phone_err)}", status_code=302)
+
+    email_norm = email.strip().lower()
+    existing = db.query(Customer).filter(
+        Customer.email == email_norm,
+        Customer.id != customer.id,
+    ).first()
+    if existing:
+        return RedirectResponse(
+            f"/musteri/profile?error={quote_plus('Bu e-posta adresi zaten kayıtlı.')}",
+            status_code=302,
+        )
+
+    customer.first_name = first_name.strip()
+    customer.last_name = last_name.strip()
+    customer.phone = normalized_phone
+    customer.email = email_norm
+    db.commit()
+    return RedirectResponse(
+        f"/musteri/profile?success={quote_plus('Bilgileriniz güncellendi.')}",
+        status_code=302,
+    )
+
+
+@router.post("/musteri/profile/password")
+async def musteri_change_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    new_password_confirm: str = Form(...),
+    db: Session = Depends(get_db),
+    customer: Customer = Depends(get_current_customer),
+):
+    if not customer.portal_password_hash or not verify_password(current_password, customer.portal_password_hash):
+        return RedirectResponse(
+            f"/musteri/profile?error={quote_plus('Mevcut şifreniz yanlış.')}",
+            status_code=302,
+        )
+    if len(new_password) < 6:
+        return RedirectResponse(
+            f"/musteri/profile?error={quote_plus('Yeni şifre en az 6 karakter olmalıdır.')}",
+            status_code=302,
+        )
+    if new_password != new_password_confirm:
+        return RedirectResponse(
+            f"/musteri/profile?error={quote_plus('Yeni şifreler eşleşmiyor.')}",
+            status_code=302,
+        )
+
+    customer.portal_password_hash = hash_password(new_password)
+    db.commit()
+    return RedirectResponse(
+        f"/musteri/profile?success={quote_plus('Şifreniz güncellendi.')}",
+        status_code=302,
+    )

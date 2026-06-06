@@ -17,8 +17,8 @@
 <!-- Search -->
 <div class="relative">
   <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#8c909f] text-xl">search</span>
-  <form method="get" action="/vehicles">
-    <input type="text" name="search" value="{{ search }}"
+  <form method="get" action="/vehicles" id="search-form">
+    <input type="text" name="search" value="{{ search }}" id="search-input" autocomplete="off"
            placeholder="{{ t('veh_search') }}"
            class="w-full bg-[#1e1f26] rounded-2xl ghost-border pl-12 pr-4 py-3.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
   </form>
@@ -102,4 +102,28 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Anlık arama: yazdıkça (debounce ile) otomatik gönder, Enter gerekmez
+  (function () {
+    const form  = document.getElementById('search-form');
+    const input = document.getElementById('search-input');
+    if (!form || !input) return;
+
+    let timer;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => form.submit(), 300);
+    });
+
+    // Sayfa yenilendikten sonra odağı ve imleci sona getir
+    if (input.value) {
+      input.focus();
+      const len = input.value.length;
+      input.setSelectionRange(len, len);
+    }
+  })();
+</script>
 {% endblock %}

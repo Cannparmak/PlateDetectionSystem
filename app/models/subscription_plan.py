@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class SubscriptionPlan(Base):
-    """Abonelik planları — saatlik, günlük, aylık vb."""
+    """Abonelik planları — en az aylık (aylık, 3 aylık, 6 aylık, yıllık)."""
 
     __tablename__ = "subscription_plans"
 

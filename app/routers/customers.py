@@ -17,9 +17,6 @@ from app.models.subscription_plan import SubscriptionPlan
 from app.models.vehicle import Vehicle
 from app.models.user import User
 from app.services.auth_service import hash_password
-from src.postprocess.text_cleaner import PlateCleaner
-
-_cleaner = PlateCleaner()
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 templates = get_templates(Path(__file__).parent.parent / "templates")
@@ -79,26 +76,6 @@ def _build_phone(code: str, local: str) -> tuple[str, str]:
     return f"{code}{digits}", ""
 
 
-def _validate_tc(tc: str) -> tuple[bool, str]:
-    """
-    TC kimlik no format kontrolü (11 rakam, 0 ile başlamaz).
-    Checksum doğrulaması yapılmaz.
-    Returns: (geçerli_mi, hata_mesajı)
-    """
-    tc = tc.strip()
-    digits_only = re.sub(r"\D", "", tc)
-    if len(digits_only) != 11:
-        return False, f"T.C. Kimlik No tam 11 rakam olmalıdır (girilen: {len(digits_only)} rakam)."
-    if digits_only[0] == "0":
-        return False, "T.C. Kimlik No 0 ile başlayamaz."
-    return True, ""
-
-
-def _normalize_plate(raw: str) -> str:
-    """Plakayı normalize et — büyük harf, boşluksuz."""
-    return re.sub(r"[^A-Z0-9]", "", raw.upper())
-
-
 # ---------------------------------------------------------------------------
 # Liste
 # ---------------------------------------------------------------------------
@@ -113,12 +90,16 @@ async def customer_list(
 ):
     per_page = 10
     q = db.query(Customer).filter(Customer.is_active == True).options(joinedload(Customer.vehicles))
-    if search:
-        q = q.filter(
-            (Customer.first_name.ilike(f"%{search}%")) |
-            (Customer.last_name.ilike(f"%{search}%")) |
-            (Customer.phone.ilike(f"%{search}%"))
-        )
+    if search.strip():
+        # Her kelime ayrı eşleşmeli: "ahmet durmaz" → first=Ahmet, last=Durmaz
+        for token in search.split():
+            like = f"%{token}%"
+            q = q.filter(
+                Customer.first_name.ilike(like) |
+                Customer.last_name.ilike(like) |
+                Customer.phone.ilike(like) |
+                Customer.email.ilike(like)
+            )
     total = q.count()
     customers = q.order_by(Customer.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
     return templates.TemplateResponse(request, "customers/list.html", {
@@ -159,12 +140,8 @@ async def create_customer(
     last_name: str = Form(...),
     phone_code: str = Form(default="+90"),
     phone: str = Form(...),
-    tc_no: str = Form(...),
-    plate_number: str = Form(...),
-    email: str = Form(default=""),
-    address: str = Form(default=""),
-    notes: str = Form(default=""),
-    portal_password: str = Form(default=""),
+    email: str = Form(...),
+    portal_password: str = Form(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
@@ -176,54 +153,30 @@ async def create_customer(
             "phone_local": phone,
             "form": {
                 "first_name": first_name, "last_name": last_name,
-                "tc_no": tc_no, "plate_number": plate_number,
-                "email": email, "address": address, "notes": notes,
+                "email": email,
             },
         }, status_code=400)
-
-    # TC kontrolü
-    tc_ok, tc_err = _validate_tc(tc_no.strip())
-    if not tc_ok:
-        return _err(tc_err)
 
     # Telefon doğrulama + normalize
     normalized_phone, phone_err = _build_phone(phone_code, phone.strip())
     if phone_err:
         return _err(phone_err)
 
-    # Plaka kontrolü
-    plate = _normalize_plate(plate_number)
-    if len(plate) < 5:
-        return _err("Geçersiz plaka formatı.")
-    existing_plate = db.query(Vehicle).filter(Vehicle.plate_number == plate, Vehicle.is_active == True).first()
-    if existing_plate:
-        return _err(f"{plate} plakası zaten kayıtlı.")
-
     # E-posta benzersizlik kontrolü
-    if email:
-        if db.query(Customer).filter(Customer.email == email.strip().lower()).first():
-            return _err("Bu e-posta adresi zaten kayıtlı.")
+    if db.query(Customer).filter(Customer.email == email.strip().lower()).first():
+        return _err("Bu e-posta adresi zaten kayıtlı.")
+
+    if len(portal_password) < 6:
+        return _err("Şifre en az 6 karakter olmalıdır.")
 
     customer = Customer(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
         phone=normalized_phone,
-        tc_no=tc_no.strip(),
-        email=email.strip().lower() or None,
-        address=address.strip() or None,
-        notes=notes.strip() or None,
-        portal_password_hash=hash_password(portal_password) if portal_password else None,
+        email=email.strip().lower(),
+        portal_password_hash=hash_password(portal_password),
     )
     db.add(customer)
-    db.flush()  # customer.id için
-
-    vehicle = Vehicle(
-        customer_id=customer.id,
-        plate_number=plate,
-        plate_display=_cleaner.to_display(plate),
-        vehicle_type="otomobil",
-    )
-    db.add(vehicle)
     db.commit()
     return RedirectResponse(f"/customers/{customer.id}", status_code=302)
 
@@ -288,10 +241,7 @@ async def update_customer(
     last_name: str = Form(...),
     phone_code: str = Form(default="+90"),
     phone: str = Form(...),
-    tc_no: str = Form(...),
-    email: str = Form(default=""),
-    address: str = Form(default=""),
-    notes: str = Form(default=""),
+    email: str = Form(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_staff_user),
 ):
@@ -307,21 +257,22 @@ async def update_customer(
             "phone_local": phone,
         }, status_code=400)
 
-    tc_ok, tc_err = _validate_tc(tc_no.strip())
-    if not tc_ok:
-        return _err(tc_err)
-
     normalized_phone, phone_err = _build_phone(phone_code, phone.strip())
     if phone_err:
         return _err(phone_err)
 
+    # E-posta benzersizlik kontrolü (başka müşteriye ait olmamalı)
+    existing = db.query(Customer).filter(
+        Customer.email == email.strip().lower(),
+        Customer.id != customer_id,
+    ).first()
+    if existing:
+        return _err("Bu e-posta adresi zaten kayıtlı.")
+
     customer.first_name = first_name.strip()
     customer.last_name = last_name.strip()
     customer.phone = normalized_phone
-    customer.tc_no = tc_no.strip()
-    customer.email = email.strip().lower() or None
-    customer.address = address.strip() or None
-    customer.notes = notes.strip() or None
+    customer.email = email.strip().lower()
     db.commit()
     return RedirectResponse(f"/customers/{customer_id}", status_code=302)
 

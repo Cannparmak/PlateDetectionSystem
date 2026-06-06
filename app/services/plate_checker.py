@@ -337,11 +337,16 @@ class PlateChecker:
             )
 
         # ── MİSAFİR ÇIKIŞI — ücret hesapla ──────────────────────────
-        fee          = self._fee_calc.calculate(duration)
         bracket_name = self._fee_calc.get_bracket_name(duration)
 
-        active_session.fee_amount = fee
-        active_session.is_paid    = fee == 0.0  # 0 TL ücreti borç olarak kaydetme
+        if active_session.is_paid:
+            # Araç içerideyken online ön ödeme yapılmış — yeniden ücretlendirme yok,
+            # ödenmiş tutar korunur (plate_query.py /on-odeme akışı).
+            fee = active_session.fee_amount or 0.0
+        else:
+            fee = self._fee_calc.calculate(duration)
+            active_session.fee_amount = fee
+            active_session.is_paid    = fee == 0.0  # 0 TL ücreti borç olarak kaydetme
         self._db.flush()
 
         total_debt = self._get_total_debt(vehicle.id)

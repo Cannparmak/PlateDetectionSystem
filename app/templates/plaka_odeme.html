@@ -33,8 +33,9 @@
     .card-front,.card-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
     .card-back{transform:rotateY(180deg);}
   </style>
+  <script src="/static/js/app.js?v=10"></script>
 </head>
-<body class="min-h-screen" x-data="{
+<body class="min-h-screen" x-init="$store.app.init()" x-data="{
   flipped: false,
   cardName: '',
   cardNum: '',
@@ -65,7 +66,12 @@
       <h1 class="text-2xl font-bold text-[#e2e2eb]" x-text="$store.app.t('pay_online_title')">Online Ödeme</h1>
       <p class="text-sm text-[#8c909f] mt-1">
         <span class="plate-font font-bold text-[#adc6ff]">{{ plate_display }}</span>
-        &mdash; <span x-text="$store.app.t('pay_total_debt')">Toplam borç</span>:
+        &mdash;
+        {% if is_prepay %}
+        <span x-text="$store.app.isEN ? 'Estimated fee' : 'Tahmini ücret'">Tahmini ücret</span>:
+        {% else %}
+        <span x-text="$store.app.t('pay_total_debt')">Toplam borç</span>:
+        {% endif %}
         <span class="font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(total_debt) }}</span>
       </p>
     </div>
@@ -109,7 +115,8 @@
     </div>
 
     <!-- Payment form -->
-    <form method="post" action="/plaka-sorgula/odeme/{{ plate_number }}/confirm"
+    <form method="post"
+          action="{{ '/plaka-sorgula/on-odeme/' ~ plate_number ~ '/confirm' if is_prepay else '/plaka-sorgula/odeme/' ~ plate_number ~ '/confirm' }}"
           class="bg-[#1e1f26] rounded-2xl p-6 ghost-border space-y-4"
           @submit="loading = true">
 
@@ -184,17 +191,14 @@
         <div class="flex items-center justify-between px-6 py-3">
           <div>
             <p class="text-xs font-semibold text-[#e2e2eb]">
-              {{ s.exit_time.strftime('%d.%m.%Y') if s.exit_time else '—' }}
+              {{ s.exit_time.strftime('%d.%m.%Y') if s.exit_time else s.entry_time.strftime('%d.%m.%Y') }}
             </p>
             <p class="text-[10px] text-[#8c909f]">
-              {{ s.entry_time.strftime('%H:%M') }} → {{ s.exit_time.strftime('%H:%M') if s.exit_time else '?' }}
-              {% if s.duration_minutes %}
-                · {% set h = s.duration_minutes // 60 %}{% set m = s.duration_minutes % 60 %}
-                {% if h %}{{ h }}s {{ m }}dk{% else %}{{ m }}dk{% endif %}
-              {% endif %}
+              {{ s.entry_time.strftime('%H:%M') }} →
+              {% if s.exit_time %}{{ s.exit_time.strftime('%H:%M') }}{% else %}<span x-text="$store.app.isEN ? 'still inside' : 'hâlâ içeride'">hâlâ içeride</span>{% endif %}
             </p>
           </div>
-          <p class="text-sm font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(s.fee_amount) }}</p>
+          <p class="text-sm font-bold text-[#ffb4ab]">₺{{ "%.0f"|format(total_debt if is_prepay else s.fee_amount) }}</p>
         </div>
         {% endfor %}
       </div>

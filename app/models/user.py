@@ -9,7 +9,7 @@ from app.database import Base
 
 
 class User(Base):
-    """Staff kullanıcıları — Admin ve Kasiyer."""
+    """Staff kullanıcıları — yalnızca Admin (Kasiyer rolü kaldırıldı)."""
 
     __tablename__ = "users"
 

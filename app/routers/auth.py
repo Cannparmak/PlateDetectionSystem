@@ -107,24 +107,23 @@ async def musteri_register(
     first_name: str = Form(...),
     last_name: str = Form(...),
     phone: str = Form(...),
-    email: str = Form(default=""),
+    email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
     # E-posta benzersizlik kontrolü
-    if email:
-        exists = db.query(Customer).filter(Customer.email == email.strip().lower()).first()
-        if exists:
-            lang = get_request_lang(request)
-            return templates.TemplateResponse(request, "auth/register.html", {
-                "error": translate("auth.email_exists", lang),
-            }, status_code=400)
+    exists = db.query(Customer).filter(Customer.email == email.strip().lower()).first()
+    if exists:
+        lang = get_request_lang(request)
+        return templates.TemplateResponse(request, "auth/register.html", {
+            "error": translate("auth.email_exists", lang),
+        }, status_code=400)
 
     customer = Customer(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
         phone=phone.strip(),
-        email=email.strip().lower() or None,
+        email=email.strip().lower(),
         portal_password_hash=hash_password(password),
     )
     db.add(customer)

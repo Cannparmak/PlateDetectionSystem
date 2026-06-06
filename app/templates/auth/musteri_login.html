@@ -43,7 +43,7 @@
     html.light input{background-color:var(--bg-sidebar)!important;color:var(--text-primary)!important;}
     html.light input::placeholder{color:var(--text-subtle)!important;}
   </style>
-  <script src="/static/js/app.js?v=6"></script>
+  <script src="/static/js/app.js?v=9"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4" x-data x-init="$store.app.init()">
@@ -89,7 +89,7 @@
     <div class="mt-6 flex flex-col items-center gap-2 text-sm text-[#8c909f]">
       <a href="/musteri/register" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
         <span class="material-symbols-outlined text-base">person_add</span>
-        <span x-text="$store.app.t('login_customer_cta')">Hesabınız yok mu? Kayıt olun</span>
+        <span x-text="$store.app.t('login_customer_cta')">Müşteri Kayıt Ol</span>
       </a>
       <a href="/login" class="flex items-center gap-1.5 hover:text-[#adc6ff] transition-colors">
         <span class="material-symbols-outlined text-base">admin_panel_settings</span>

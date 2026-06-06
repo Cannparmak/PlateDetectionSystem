@@ -34,7 +34,12 @@
               {{ u.role | upper }}
             </span>
           </div>
-          <div class="flex items-center justify-end gap-2">
+          <div class="flex items-center justify-end gap-3">
+            <!-- Aktif / Pasif durum göstergesi -->
+            <span class="flex items-center gap-1.5 text-[11px] font-semibold {% if u.is_active %}text-tertiary{% else %}text-[#8c909f]{% endif %}">
+              <span class="w-2 h-2 rounded-full {% if u.is_active %}bg-tertiary{% else %}bg-[#8c909f]{% endif %}"></span>
+              {{ t('status_active') if u.is_active else t('status_passive') }}
+            </span>
             {% if u.id != user.id %}
             <form method="post" action="/admin/users/{{ u.id }}/toggle">
               <button type="submit"
@@ -82,14 +87,6 @@
           <input type="email" name="email" required
                  class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"
                  placeholder="ahmet@otoparkpro.com"/>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_role')">Rol</label>
-          <select name="role" required
-                  class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none">
-            <option value="kasiyer">Kasiyer</option>
-            <option value="admin">Admin</option>
-          </select>
         </div>
         <div>
           <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5" x-text="$store.app.t('admin_password')">Şifre</label>

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -53,11 +54,17 @@ async def vehicle_list(
 ):
     per_page = 10
     q = db.query(Vehicle).options(joinedload(Vehicle.customer))
-    if search:
-        plate_search = _cleaner.clean(search)
-        q = q.filter(
+    if search.strip():
+        term = search.strip()
+        plate_search = _cleaner.clean(term)
+        # Müşteri tam adıyla arama: "ahmet durmaz" → "Ahmet Durmaz"
+        full_name = func.lower(Customer.first_name + " " + Customer.last_name)
+        q = q.outerjoin(Customer, Vehicle.customer_id == Customer.id).filter(
             Vehicle.plate_number.ilike(f"%{plate_search}%") |
-            Vehicle.plate_display.ilike(f"%{search}%")
+            Vehicle.plate_display.ilike(f"%{term}%") |
+            Customer.first_name.ilike(f"%{term}%") |
+            Customer.last_name.ilike(f"%{term}%") |
+            full_name.like(f"%{term.lower()}%")
         )
     total = q.count()
     vehicles = q.order_by(Vehicle.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()

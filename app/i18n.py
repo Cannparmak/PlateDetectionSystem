@@ -76,8 +76,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "cust_no_portal":     {"tr": "Boş bırakılırsa müşteri portalına giriş yapamaz.", "en": "If left blank, the customer cannot log in to the portal."},
     "cust_create_plate":  {"tr": "Müşteri oluşturulduğunda bu plaka otomatik araç olarak eklenir.", "en": "When the customer is created, this plate will be added automatically as a vehicle."},
     "cust_tc_rule":       {"tr": "11 haneli, 0 ile başlamaz",     "en": "11 digits, cannot start with 0"},
+    "cust_save":          {"tr": "Kaydet",                        "en": "Save"},
     "cust_update":        {"tr": "Güncelle",                      "en": "Update"},
     "cust_cancel":        {"tr": "İptal",                         "en": "Cancel"},
+    "cust_portal_pass_hint": {"tr": "En az 6 karakter. Müşteri bu şifre ile portala giriş yapar.", "en": "At least 6 characters. The customer uses this password to log in to the portal."},
     "cust_no_results":    {"tr": "Arama sonucu bulunamadı.",       "en": "No search results found."},
     "cust_no_customers":  {"tr": "Henüz kayıtlı müşteri yok.",    "en": "No customers registered yet."},
     "cust_delete_confirm": {
@@ -96,6 +98,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "veh_plate":          {"tr": "Plaka",                         "en": "Plate"},
     "veh_no_results":     {"tr": "Arama sonucu bulunamadı.",       "en": "No search results found."},
     "veh_no_vehicles":    {"tr": "Henüz kayıtlı araç yok.",       "en": "No vehicles registered yet."},
+    "portal_add_vehicle_desc": {"tr": "Plakayı girin, sisteme kaydedilsin", "en": "Enter the plate to register it in the system"},
+    "portal_save_vehicle":     {"tr": "Aracı Kaydet",                "en": "Save Vehicle"},
     # ── Subscriptions ────────────────────────────────────────────────
     "sub_new":            {"tr": "Yeni Abonelik",                 "en": "New Subscription"},
     "sub_sell":           {"tr": "Abonelik Sat",                  "en": "Sell Subscription"},
@@ -111,6 +115,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "ses_entry":          {"tr": "Giriş",                         "en": "Entry"},
     # ── Status ───────────────────────────────────────────────────────
     "status_active":      {"tr": "Aktif",                         "en": "Active"},
+    "status_passive":     {"tr": "Pasif",                         "en": "Passive"},
     # ── Portal / Customer-facing ─────────────────────────────────────
     "portal_inside_badge":    {"tr": "İÇERİDE",                   "en": "INSIDE"},
     "portal_exited_badge":    {"tr": "ÇIKTI",                     "en": "EXITED"},
@@ -123,6 +128,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     # ── Landing / Navigation ─────────────────────────────────────────
     "landing_plate":      {"tr": "Plaka Sorgula",                 "en": "Plate Query"},
     "nav_debts":          {"tr": "Borçlar",                       "en": "Debts"},
+    "nav_pricing":        {"tr": "Fiyatlandırma",                 "en": "Pricing"},
+    # ── Pricing / Fiyatlandırma ──────────────────────────────────────
+    "pricing_title":      {"tr": "Fiyatlandırma",                 "en": "Pricing"},
+    "pricing_saved":      {"tr": "Değişiklikler kaydedildi.",     "en": "Changes saved."},
+    "pricing_err_bracket":{"tr": "Geçersiz dilim değerleri. Bitiş, başlangıçtan büyük olmalı.", "en": "Invalid bracket values. End must be greater than start."},
+    "pricing_err_price":  {"tr": "Geçersiz fiyat değeri.",        "en": "Invalid price value."},
+    "pricing_err_debt":   {"tr": "Geçersiz borç limiti.",         "en": "Invalid debt limit."},
     # ── Errors ───────────────────────────────────────────────────────
     "err.auth_required": {
         "tr": "Giris yapmaniz gerekiyor.",

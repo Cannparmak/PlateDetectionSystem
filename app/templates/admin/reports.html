@@ -56,26 +56,38 @@
 <div class="grid grid-cols-12 gap-6">
 
   <!-- Daily Entries Chart -->
-  <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border">
+  <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border flex flex-col">
     <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('admin_daily_entries')">Günlük Giriş Sayısı</h3>
     {% set max_count = daily_entries | map(attribute='count') | max if daily_entries else 1 %}
     {% set max_count = max_count if max_count > 0 else 1 %}
-    <div class="flex items-end gap-3 h-48">
-      {% for day in daily_entries %}
-      {% set height_pct = (day.count / max_count * 100) | int %}
-      <div class="flex-1 flex flex-col items-center gap-2">
-        <span class="text-xs text-white font-bold">{{ day.count }}</span>
-        <div class="w-full rounded-t-xl bg-primary/20 hover:bg-primary/40 transition-colors relative overflow-hidden"
-             style="height: {{ [height_pct, 4] | max }}%">
-          <div class="absolute bottom-0 left-0 right-0 bg-primary rounded-t-xl"
-               style="height: {{ [height_pct, 4] | max }}%; animation: growUp 0.6s ease-out;"></div>
-        </div>
-        <span class="text-[10px] text-[#8c909f]">{{ day.date }}</span>
+    {% if daily_entries | sum(attribute='count') > 0 %}
+    <div class="relative flex-1 min-h-[12rem]">
+      <!-- Yatay ızgara çizgileri -->
+      <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+        {% for _ in range(4) %}<div class="border-t border-outline-variant/10"></div>{% endfor %}
+        <div></div>
       </div>
-      {% else %}
-      <div class="col-span-7 text-[#8c909f] text-sm py-10 text-center w-full" x-text="$store.app.t('admin_daily_no_data')">Veri yok.</div>
+      <div class="relative flex items-end gap-3 h-full">
+        {% for day in daily_entries %}
+        {% set height_pct = ((day.count / max_count * 88) | int) %}
+        <div class="flex-1 h-full flex flex-col items-center justify-end group">
+          <span class="text-xs font-bold text-white mb-1.5">{{ day.count }}</span>
+          <div class="w-full rounded-t-lg transition-all group-hover:brightness-125"
+               style="height: {{ [height_pct, 3] | max }}%; min-height: 6px; transform-origin: bottom;
+                      background: linear-gradient(to top, var(--accent), color-mix(in srgb, var(--accent) 45%, transparent));
+                      animation: growUp 0.6s ease-out;"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="flex gap-3 mt-2">
+      {% for day in daily_entries %}
+      <span class="flex-1 text-center text-[10px] text-[#8c909f]">{{ day.date }}</span>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="flex-1 min-h-[12rem] flex items-center justify-center text-[#8c909f] text-sm" x-text="$store.app.t('admin_daily_no_data')">Veri yok.</div>
+    {% endif %}
   </div>
 
   <!-- Plan Distribution -->
@@ -110,25 +122,41 @@
   </div>
 
   <!-- 30 Günlük Hasılat Grafiği -->
-  <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border">
+  <div class="col-span-8 bg-surface-container rounded-3xl p-6 ghost-border flex flex-col">
     <h3 class="text-xs font-bold text-[#8c909f] uppercase tracking-widest mb-6" x-text="$store.app.t('rev_30day')">Son 30 Gün Hasılatı</h3>
     {% set max_rev = daily_revenue | map(attribute='total') | max if daily_revenue else 1 %}
     {% set max_rev = max_rev if max_rev > 0 else 1 %}
-    <div class="flex items-end gap-1 h-40">
-      {% for day in daily_revenue %}
-      {% set height_pct = (day.total / max_rev * 100) | int %}
-      <div class="flex-1 flex flex-col items-center gap-1 group relative" title="{{ day.date }}: ₺{{ day.total }}">
-        <div class="w-full rounded-t-sm relative overflow-hidden" style="height: {{ [height_pct, 2] | max }}%; background:rgba(77,141,255,0.15)">
-          <div class="absolute bottom-0 left-0 right-0 rounded-t-sm" style="height:100%;background:#4d8eff;opacity:0.8"></div>
-        </div>
-        {% if loop.index % 5 == 0 %}
-        <span class="text-[9px] text-[#8c909f]">{{ day.date }}</span>
-        {% else %}
-        <span class="text-[9px] text-transparent">·</span>
-        {% endif %}
+    {% if daily_revenue | sum(attribute='total') > 0 %}
+    <div class="relative flex-1 min-h-[10rem]">
+      <!-- Yatay ızgara çizgileri -->
+      <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+        {% for _ in range(3) %}<div class="border-t border-outline-variant/10"></div>{% endfor %}
+        <div></div>
       </div>
+      <div class="relative flex items-end gap-1 h-full">
+        {% for day in daily_revenue %}
+        {% set height_pct = (day.total / max_rev * 85) | int %}
+        <div class="flex-1 h-full flex flex-col justify-end items-center group"
+             title="{{ day.date }}: ₺{{ '%.0f'|format(day.total) }}">
+          {% if day.total > 0 %}
+          <span class="text-[10px] font-bold text-white mb-0.5 whitespace-nowrap leading-none">₺{{ '%.0f'|format(day.total) }}</span>
+          {% endif %}
+          <div class="w-full rounded-t-sm transition-all group-hover:brightness-125 cursor-default"
+               style="height: {{ [height_pct, 2] | max }}%; min-height: 3px; transform-origin: bottom;
+                      background: linear-gradient(to top, #4d8eff, rgba(77,141,255,0.45));
+                      animation: growUp 0.6s ease-out;"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="flex gap-1 mt-2">
+      {% for day in daily_revenue %}
+      <span class="flex-1 text-center text-[9px] text-[#8c909f] truncate">{% if loop.index % 5 == 0 %}{{ day.date }}{% endif %}</span>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="flex-1 min-h-[10rem] flex items-center justify-center text-[#8c909f] text-sm" x-text="$store.app.t('admin_daily_no_data')">Veri yok.</div>
+    {% endif %}
   </div>
 
   <!-- Ödeme Yöntemi (Bu Ay) -->
@@ -190,8 +218,8 @@
 {% block head %}
 <style>
 @keyframes growUp {
-  from { height: 0; }
-  to { height: 100%; }
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
 </style>
 {% endblock %}

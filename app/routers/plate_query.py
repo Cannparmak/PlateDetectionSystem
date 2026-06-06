@@ -162,11 +162,81 @@ async def payment_confirm(
     )
 
 
+# ---------------------------------------------------------------------------
+# İçerideki araç için ön ödeme — tahmini ücreti çıkıştan önce online öde
+# ---------------------------------------------------------------------------
+
+def _get_active_estimate(plate_number: str, db: Session):
+    """Plakaya ait, içeride (aktif) ve henüz ödenmemiş misafir oturumunu +
+    güncel tahmini ücreti döner: (vehicle, active_session, estimated_fee)."""
+    vehicle = db.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
+    if vehicle is None:
+        return None, None, 0.0
+    active = (
+        db.query(ParkingSession)
+        .filter(
+            ParkingSession.vehicle_id == vehicle.id,
+            ParkingSession.is_active == True,
+            ParkingSession.is_guest == True,
+            ParkingSession.is_paid == False,
+        )
+        .first()
+    )
+    if active is None:
+        return vehicle, None, 0.0
+    elapsed = max(1, int((datetime.utcnow() - active.entry_time).total_seconds() / 60))
+    fee = round(FeeCalculator(db).calculate(elapsed), 2)
+    return vehicle, active, fee
+
+
+@router.get("/plaka-sorgula/on-odeme/{plate_number}", response_class=HTMLResponse)
+async def prepay_page(request: Request, plate_number: str, db: Session = Depends(get_db)):
+    vehicle, active, estimated = _get_active_estimate(plate_number, db)
+    if vehicle is None or active is None or estimated <= 0:
+        return RedirectResponse(f"/plaka-sorgula?plaka={plate_number}", status_code=303)
+    return templates.TemplateResponse(request, "plaka_odeme.html", {
+        "plate_number": plate_number,
+        "plate_display": vehicle.plate_display,
+        "unpaid_sessions": [active],
+        "total_debt": estimated,
+        "is_prepay": True,
+    })
+
+
+@router.post("/plaka-sorgula/on-odeme/{plate_number}/confirm", response_class=HTMLResponse)
+async def prepay_confirm(
+    request: Request,
+    plate_number: str,
+    card_name: str = Form(...),
+    card_number: str = Form(...),
+    card_expiry: str = Form(...),
+    card_cvv: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    vehicle, active, estimated = _get_active_estimate(plate_number, db)
+    if vehicle is None or active is None or estimated <= 0:
+        return RedirectResponse(f"/plaka-sorgula?plaka={plate_number}", status_code=303)
+
+    # Ön ödeme: tahmini ücreti oturuma işle, ödendi olarak işaretle.
+    # Araç içeride kalır; çıkışta yeniden ücretlendirilmez (plate_checker.py).
+    active.fee_amount     = estimated
+    active.is_paid        = True
+    active.payment_method = "online"
+    active.paid_at        = datetime.utcnow()
+    db.commit()
+
+    return RedirectResponse(
+        f"/plaka-sorgula/odeme/{plate_number}/basarili?tutar={estimated:.0f}&onodeme=1",
+        status_code=303,
+    )
+
+
 @router.get("/plaka-sorgula/odeme/{plate_number}/basarili", response_class=HTMLResponse)
 async def payment_success(
     request: Request,
     plate_number: str,
     tutar: str = "0",
+    onodeme: str = "0",
     db: Session = Depends(get_db),
 ):
     vehicle = db.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
@@ -175,4 +245,5 @@ async def payment_success(
         "plate_number": plate_number,
         "plate_display": plate_display,
         "tutar": tutar,
+        "is_prepay": onodeme == "1",
     })

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_staff_user, require_admin
-from app.i18n import get_templates
+from app.i18n import get_request_lang, get_templates, translate
 from app.models.customer import Customer
 from app.models.parking_config import ParkingConfig
 from app.models.parking_session import ParkingSession
@@ -113,18 +113,18 @@ async def create_user(
     email: str = Form(...),
     username: str = Form(...),
     full_name: str = Form(...),
-    role: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db),
     user: User = Depends(require_admin),
 ):
     if db.query(User).filter(User.email == email.strip().lower()).first():
         raise HTTPException(400, "Bu e-posta zaten kayitli.")
+    # Kasiyer rolü kaldırıldı — tüm personel hesapları admin
     new_user = User(
         email=email.strip().lower(),
         username=username.strip(),
         full_name=full_name.strip(),
-        role=role,
+        role="admin",
         hashed_password=hash_password(password),
     )
     db.add(new_user)
@@ -401,3 +401,165 @@ async def update_config(
     config.close_time = close_time
     db.commit()
     return RedirectResponse("/admin", status_code=302)
+
+
+# ──────────────────────────────────────────────────────────────────
+# Fiyatlandırma — ücret dilimleri, abonelik fiyatları, borç limiti
+# ──────────────────────────────────────────────────────────────────
+
+_DEFAULT_DEBT_THRESHOLD = 500.0
+
+
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(
+    request: Request,
+    saved: int | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Park ücret dilimleri, abonelik fiyatları ve borç limiti düzenleme sayfası."""
+    config   = db.query(ParkingConfig).first()
+    brackets = (
+        db.query(ParkingRateBracket)
+        .order_by(ParkingRateBracket.display_order)
+        .all()
+    )
+    plans = (
+        db.query(SubscriptionPlan)
+        .order_by(SubscriptionPlan.display_order)
+        .all()
+    )
+
+    flash = None
+    if saved:
+        flash = {"type": "success", "message": translate("pricing_saved", get_request_lang(request))}
+    elif error:
+        flash = {"type": "error", "message": translate(error, get_request_lang(request))}
+
+    return templates.TemplateResponse(request, "admin/pricing.html", {
+        "user": user,
+        "config": config,
+        "brackets": brackets,
+        "plans": plans,
+        "default_debt_threshold": _DEFAULT_DEBT_THRESHOLD,
+        "flash": flash,
+    })
+
+
+@router.post("/pricing/debt-limit")
+async def update_debt_limit(
+    debt_block_threshold: float = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Maksimum borç limitini (giriş/çıkış engelleme eşiği) günceller."""
+    if debt_block_threshold < 0:
+        return RedirectResponse("/admin/pricing?error=pricing_err_debt", status_code=302)
+
+    config = db.query(ParkingConfig).first()
+    if not config:
+        config = ParkingConfig()
+        db.add(config)
+    config.debt_block_threshold = debt_block_threshold
+    db.commit()
+    return RedirectResponse("/admin/pricing?saved=1", status_code=302)
+
+
+# ── Ücret dilimleri ────────────────────────────────────────────────
+
+def _valid_bracket(name: str, min_minutes: int, max_minutes: int, price: float) -> bool:
+    return bool(name.strip()) and min_minutes >= 0 and max_minutes > min_minutes and price >= 0
+
+
+@router.post("/pricing/brackets/new")
+async def create_bracket(
+    name: str = Form(...),
+    min_minutes: int = Form(...),
+    max_minutes: int = Form(...),
+    price: float = Form(...),
+    display_order: int = Form(default=0),
+    is_active: bool = Form(default=False),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Yeni ücret dilimi ekler."""
+    if not _valid_bracket(name, min_minutes, max_minutes, price):
+        return RedirectResponse("/admin/pricing?error=pricing_err_bracket", status_code=302)
+
+    db.add(ParkingRateBracket(
+        name=name.strip(),
+        min_minutes=min_minutes,
+        max_minutes=max_minutes,
+        price=price,
+        display_order=display_order,
+        is_active=is_active,
+    ))
+    db.commit()
+    return RedirectResponse("/admin/pricing?saved=1", status_code=302)
+
+
+@router.post("/pricing/brackets/{bracket_id}")
+async def update_bracket(
+    bracket_id: int,
+    name: str = Form(...),
+    min_minutes: int = Form(...),
+    max_minutes: int = Form(...),
+    price: float = Form(...),
+    display_order: int = Form(default=0),
+    is_active: bool = Form(default=False),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Mevcut ücret dilimini günceller."""
+    bracket = db.query(ParkingRateBracket).get(bracket_id)
+    if not bracket:
+        raise HTTPException(404, "Ucret dilimi bulunamadi.")
+    if not _valid_bracket(name, min_minutes, max_minutes, price):
+        return RedirectResponse("/admin/pricing?error=pricing_err_bracket", status_code=302)
+
+    bracket.name          = name.strip()
+    bracket.min_minutes   = min_minutes
+    bracket.max_minutes   = max_minutes
+    bracket.price         = price
+    bracket.display_order = display_order
+    bracket.is_active     = is_active
+    db.commit()
+    return RedirectResponse("/admin/pricing?saved=1", status_code=302)
+
+
+@router.post("/pricing/brackets/{bracket_id}/delete")
+async def delete_bracket(
+    bracket_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Ücret dilimini siler."""
+    bracket = db.query(ParkingRateBracket).get(bracket_id)
+    if bracket:
+        db.delete(bracket)
+        db.commit()
+    return RedirectResponse("/admin/pricing?saved=1", status_code=302)
+
+
+# ── Abonelik planı fiyatları ───────────────────────────────────────
+
+@router.post("/pricing/plans/{plan_id}")
+async def update_plan_price(
+    plan_id: int,
+    price: float = Form(...),
+    is_active: bool = Form(default=False),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Abonelik planının fiyatını ve aktiflik durumunu günceller."""
+    plan = db.query(SubscriptionPlan).get(plan_id)
+    if not plan:
+        raise HTTPException(404, "Abonelik plani bulunamadi.")
+    if price < 0:
+        return RedirectResponse("/admin/pricing?error=pricing_err_price", status_code=302)
+
+    plan.price     = price
+    plan.is_active = is_active
+    db.commit()
+    return RedirectResponse("/admin/pricing?saved=1", status_code=302)

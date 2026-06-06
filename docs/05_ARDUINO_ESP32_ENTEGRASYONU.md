@@ -149,10 +149,24 @@ ARDUINO_API_KEY=esp32-otopark-2024  # ESP32'nin X-API-Key header değeri
 GET /api/arduino/state
 Header: X-API-Key: esp32-otopark-2024
 
-Yanıt:
-  "1"  — Yeşil sinyal var (GATE_OPEN_DURATION içinde)
-  "0"  — Sinyal yok / süresi dolmuş
+Yanıt formatı (tek satır):  "<signal>|<info>"
+  signal:
+    "1"  — Yeşil sinyal var (GATE_OPEN_DURATION içinde)
+    "0"  — Sinyal yok / süresi dolmuş
+  info:
+    LCD 2. satırında gösterilecek borç/abonelik bilgisi (ASCII), boş olabilir.
+
+Örnekler:
+  "1|Borc yok - Iyi gunler"
+  "1|Abonelik bitisi: 12.08.2026 - 45 gun kaldi"
+  "0|Borc: 600TL - Limit 550TL asildi"
+  "0|"
 ```
+
+> `info` metni `camera.py` içindeki `_arduino_info_line()` tarafından `CheckResult`'tan
+> üretilir; limit değeri `parking_config.debt_block_threshold` ayarından okunur.
+> ESP32 `|` karakterinden böler: sol taraf LED/servo kararı, sağ taraf LCD 2. satırda
+> kayan (marquee) yazı olur. Eski yalnız `"1"`/`"0"` formatı da geriye dönük desteklenir.
 
 ### 5.3 Sinyal Akış Süreci
 

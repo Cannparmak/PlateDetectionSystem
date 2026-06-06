@@ -74,14 +74,13 @@ def seed_plans(db: Session) -> None:
         print("  [ATLA] Abonelik planları zaten mevcut.")
         return
 
+    # Abonelik en az aylık — saatlik/günlük/haftalık planlar kaldırıldı.
+    # Fiyatlar misafir günlük tavanına (₺550) çapalı, süre uzadıkça kademeli indirim.
     plans = [
-        SubscriptionPlan(name="Saatlik",  plan_type="hourly",    duration_hours=1,    price=10.0,   display_order=1),
-        SubscriptionPlan(name="Günlük",   plan_type="daily",     duration_hours=24,   price=50.0,   display_order=2),
-        SubscriptionPlan(name="Haftalık", plan_type="weekly",    duration_hours=168,  price=200.0,  display_order=3),
-        SubscriptionPlan(name="Aylık",    plan_type="monthly",   duration_hours=720,  price=500.0,  display_order=4),
-        SubscriptionPlan(name="3 Aylık",  plan_type="quarterly", duration_hours=2160, price=1300.0, display_order=5),
-        SubscriptionPlan(name="6 Aylık",  plan_type="biannual",  duration_hours=4320, price=2400.0, display_order=6),
-        SubscriptionPlan(name="Yıllık",   plan_type="annual",    duration_hours=8760, price=4200.0, display_order=7),
+        SubscriptionPlan(name="Aylık",    plan_type="monthly",   duration_hours=720,  price=3500.0,  display_order=1),
+        SubscriptionPlan(name="3 Aylık",  plan_type="quarterly", duration_hours=2160, price=9000.0,  display_order=2),
+        SubscriptionPlan(name="6 Aylık",  plan_type="biannual",  duration_hours=4320, price=16500.0, display_order=3),
+        SubscriptionPlan(name="Yıllık",   plan_type="annual",    duration_hours=8760, price=30000.0, display_order=4),
     ]
     db.add_all(plans)
     db.commit()

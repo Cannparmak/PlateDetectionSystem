@@ -189,10 +189,19 @@
           <p class="text-xs text-[#8c909f]">
             <span x-text="$store.app.t('query_entry')">Giriş:</span> {{ active_session.entry_time.strftime('%d.%m.%Y %H:%M') }}
           </p>
-          {% if active_session.is_guest and estimated_fee is not none %}
+          {% if active_session.is_guest and active_session.is_paid %}
+          <div class="mt-3 flex items-center gap-2 bg-[#4edea3]/10 border border-[#4edea3]/20 rounded-xl px-4 py-3 text-sm text-[#4edea3]">
+            <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">verified</span>
+            <span>
+              <span x-text="$store.app.isEN ? 'Prepaid' : 'Ön ödeme alındı'">Ön ödeme alındı</span>
+              (₺{{ "%.0f"|format(active_session.fee_amount or 0) }}) —
+              <span x-text="$store.app.isEN ? 'no extra charge at exit.' : 'çıkışta ek ücret yok.'">çıkışta ek ücret yok.</span>
+            </span>
+          </div>
+          {% elif active_session.is_guest and estimated_fee is not none %}
           <div class="mt-3 flex items-center justify-between bg-[#0c0e14] rounded-xl px-4 py-3">
             <div>
-              <p class="text-[10px] font-bold uppercase tracking-widest text-[#8c909f]" x-text="$store.app.t('pay_total_debt')">Tahmini Ücret</p>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-[#8c909f]" x-text="$store.app.isEN ? 'Estimated Fee' : 'Tahmini Ücret'">Tahmini Ücret</p>
               {% set h = elapsed_minutes // 60 %}
               {% set m = elapsed_minutes % 60 %}
               <p class="text-xs text-[#8c909f] mt-0.5">
@@ -201,6 +210,12 @@
             </div>
             <p class="text-2xl font-bold text-[#adc6ff]">₺{{ "%.0f"|format(estimated_fee) }}</p>
           </div>
+          <a href="/plaka-sorgula/on-odeme/{{ vehicle.plate_number }}"
+             class="mt-3 w-full h-11 bg-[#4edea3] text-[#001f12] font-bold rounded-xl flex items-center justify-center gap-2
+                    hover:brightness-110 active:scale-95 transition-all text-sm">
+            <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">credit_card</span>
+            <span x-text="$store.app.isEN ? 'Pay Estimated Fee' : 'Tahmini Ücreti Öde'">Tahmini Ücreti Öde</span> — ₺{{ "%.0f"|format(estimated_fee) }}
+          </a>
           <p class="text-[10px] text-[#8c909f] mt-2" x-text="$store.app.t('query_fee_notice')">
             * Ücret çıkış anında kesinleşir. Abonelik sahibi araçlar ücretsiz çıkış yapar.
           </p>

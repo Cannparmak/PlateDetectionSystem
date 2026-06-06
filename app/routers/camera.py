@@ -59,6 +59,68 @@ def _get_pipeline():
     )
 
 
+def _arduino_info_line(check, db: Session) -> str:
+    """
+    Arduino LCD'nin 2. satırında gösterilecek borç/abonelik bilgisini üretir.
+
+    Sadece ASCII karakter kullanılır (HD44780 LCD Türkçe karakterleri
+    düzgün göstermez). Kapı sinyalinden bağımsız olarak, sürücüye
+    "neden geçebildiği / geçemediği" bilgisini verir:
+        - Abone     → "Abonelik bitisi: 12.08.2026 - 45 gun kaldi"
+        - Borcu yok → "Borc yok - Iyi gunler"
+        - Borc var  → "Borc: 480TL (Limit 550TL)"
+        - Reddedildi→ "Borc: 600TL - Limit 550TL asildi"
+    """
+    from app.models.parking_config import ParkingConfig
+
+    config = db.query(ParkingConfig).first()
+    threshold = config.debt_block_threshold if config else 500.0
+
+    action = check.action
+    debt = check.total_debt or 0.0
+
+    # ── Abone (giriş/çıkış izni) — abonelik bitiş tarihini göster ──
+    if check.subscription_active and check.subscription_info:
+        end = check.subscription_info.get("end_date", "?")
+        days = check.subscription_info.get("days_remaining")
+        if days is not None:
+            return f"Abonelik bitisi: {end} - {days} gun kaldi"
+        return f"Abonelik bitisi: {end}"
+
+    # ── Borç eşiği aşıldı — kapı açılmıyor ──
+    if action in ("DENY_DEBT", "DENY_EXIT_DEBT"):
+        return f"Borc: {debt:.0f}TL - Limit {threshold:.0f}TL asildi"
+
+    # ── Misafir çıkışı — bu seferki ücret + kalan borç ──
+    if action == "ALLOW_EXIT_GUEST":
+        fee = check.fee_amount or 0.0
+        if debt > 0:
+            return f"Ucret: {fee:.0f}TL - Toplam borc: {debt:.0f}TL"
+        return f"Ucret: {fee:.0f}TL - Borc yok"
+
+    # ── Misafir girişi — borç durumu + limit ──
+    if action == "ALLOW_GUEST":
+        if debt > 0:
+            return f"Borc: {debt:.0f}TL (Limit {threshold:.0f}TL)"
+        return "Borc yok - Iyi gunler"
+
+    if action == "ALREADY_INSIDE":
+        return "Arac zaten otoparkta"
+
+    if action == "NOT_INSIDE":
+        return "Arac otoparkta degil"
+
+    if action == "DENY":
+        if "il kodu" in check.message or "Sahte" in check.message:
+            return "Sahte plaka suphesi - Giris reddedildi"
+        return "Plaka taninmadi - Giris reddedildi"
+
+    # ── Varsayılan — borç durumunu göster ──
+    if debt > 0:
+        return f"Borc: {debt:.0f}TL (Limit {threshold:.0f}TL)"
+    return "Borc yok"
+
+
 def _save_snapshot(frame_b64: str, prefix: str) -> str | None:
     """Base64 frame'i dosyaya kaydeder, path döndürür."""
     try:
@@ -413,7 +475,7 @@ async def camera_entry(
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
 
-    set_signal(check.gate_signal)
+    set_signal(check.gate_signal, _arduino_info_line(check, db))
 
     # Session'a gate sonucunu kaydet
     if check.session_id:
@@ -471,7 +533,7 @@ async def camera_entry_by_plate(
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
 
-    set_signal(check.gate_signal)
+    set_signal(check.gate_signal, _arduino_info_line(check, db))
 
     if check.session_id:
         from app.models.parking_session import ParkingSession
@@ -526,7 +588,7 @@ async def camera_exit_by_plate(
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
 
-    set_signal(check.gate_signal)
+    set_signal(check.gate_signal, _arduino_info_line(check, db))
 
     if check.session_id:
         from app.models.parking_session import ParkingSession
@@ -597,7 +659,7 @@ async def camera_exit(
         opened = await gate.async_open()
         gate_result = "OPENED" if opened else "ERROR"
 
-    set_signal(check.gate_signal)
+    set_signal(check.gate_signal, _arduino_info_line(check, db))
 
     # Session'a snapshot kaydet
     if check.session_id:

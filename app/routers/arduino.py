@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.dependencies import verify_arduino_key
 from app.models.parking_config import ParkingConfig
-from app.services.gate_state import get_signal
+from app.services.gate_state import get_info_line, get_signal
 from app.models.parking_session import ParkingSession
 from app.models.subscription import Subscription
 from app.models.vehicle import Vehicle
@@ -91,14 +91,22 @@ async def gate_state():
     """
     Kamera sisteminin son giriş/çıkış kararını döner.
 
-    Arduino bu endpoint'i ~500ms aralıklarla polling yapar.
-    Cevap:
-        1  → Yeşil ışık (izin verildi)
-        0  → Kırmızı ışık (reddedildi veya henüz karar yok)
+    Arduino bu endpoint'i ~2 saniye aralıklarla polling yapar.
 
-    Durum, config'deki GATE_OPEN_DURATION saniyesi sonra otomatik 0'a döner.
+    Cevap formatı (tek satır):  "<signal>|<info>"
+        signal : 1 → yeşil (izin), 0 → kırmızı (red / henüz karar yok)
+        info   : LCD 2. satırında gösterilecek borç/abonelik bilgisi
+                 (örn. "Borc: 480TL (Limit 550TL)", "Borc yok",
+                       "Abonelik bitisi: 12.08.2026"). Boş olabilir.
+
+    Örnekler:
+        "1|Borc yok - Iyi gunler"
+        "0|Borc: 600TL - Limit 550TL asildi"
+        "0|"
+
+    Sinyal, config'deki GATE_OPEN_DURATION saniyesi sonra otomatik 0'a döner.
     """
-    return PlainTextResponse(str(get_signal()))
+    return PlainTextResponse(f"{get_signal()}|{get_info_line()}")
 
 
 @router.get("/ping", dependencies=[Depends(verify_arduino_key)])

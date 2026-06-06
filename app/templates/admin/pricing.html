@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ t('pricing_title') }}{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div>
+  <h1 class="text-2xl font-bold text-white" x-text="$store.app.t('pricing_title')">Fiyatlandırma</h1>
+  <p class="text-[#8c909f] text-sm mt-1" x-text="$store.app.t('pricing_subtitle')">Park ücretleri, abonelik fiyatları ve borç limiti</p>
+</div>
+
+<!-- ── Borç Limiti ───────────────────────────────────────────────── -->
+<div class="bg-surface-container rounded-3xl p-6 ghost-border">
+  <h3 class="text-sm font-bold text-white mb-1 flex items-center gap-2">
+    <span class="material-symbols-outlined text-error text-base">block</span>
+    <span x-text="$store.app.t('pricing_debt_limit')">Borç Limiti</span>
+  </h3>
+  <p class="text-xs text-[#8c909f] mb-5" x-text="$store.app.t('pricing_debt_desc')">
+    Bu tutarı aşan ödenmemiş borcu olan misafir araçların giriş/çıkışı engellenir.
+  </p>
+  <form method="post" action="/admin/pricing/debt-limit" class="flex flex-wrap items-end gap-4">
+    <div class="flex-1 min-w-[220px]">
+      <label class="block text-xs font-semibold text-[#8c909f] uppercase tracking-wider mb-1.5"
+             x-text="$store.app.t('pricing_debt_field')">Maksimum Borç Limiti (₺)</label>
+      <input type="number" name="debt_block_threshold" step="0.01" min="0" required
+             value="{{ '%g'|format(config.debt_block_threshold if config else default_debt_threshold) }}"
+             class="w-full bg-[#191b22] rounded-xl ghost-border px-3 py-2.5 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    </div>
+    <button type="submit"
+            class="h-11 px-6 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all">
+      <span x-text="$store.app.t('btn_save')">Kaydet</span>
+    </button>
+  </form>
+</div>
+
+<!-- ── Misafir Ücret Dilimleri ───────────────────────────────────── -->
+<div class="bg-surface-container rounded-3xl p-6 ghost-border">
+  <h3 class="text-sm font-bold text-white mb-1 flex items-center gap-2">
+    <span class="material-symbols-outlined text-primary text-base">sell</span>
+    <span x-text="$store.app.t('pricing_brackets')">Misafir Ücret Dilimleri</span>
+  </h3>
+  <p class="text-xs text-[#8c909f] mb-5" x-text="$store.app.t('pricing_brackets_desc')">
+    Kalış süresine göre uygulanan park ücretleri.
+  </p>
+
+  <!-- Tablo başlığı -->
+  <div class="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+    <div class="col-span-3" x-text="$store.app.t('pricing_col_name')">Dilim Adı</div>
+    <div class="col-span-1" x-text="$store.app.t('pricing_col_min')">Min</div>
+    <div class="col-span-1" x-text="$store.app.t('pricing_col_max')">Maks</div>
+    <div class="col-span-2" x-text="$store.app.t('pricing_col_price')">Ücret</div>
+    <div class="col-span-1" x-text="$store.app.t('pricing_col_order')">Sıra</div>
+    <div class="col-span-1 text-center" x-text="$store.app.t('pricing_col_active')">Aktif</div>
+    <div class="col-span-3 text-right" x-text="$store.app.t('pricing_col_actions')">İşlem</div>
+  </div>
+
+  <div class="space-y-2">
+    {% for b in brackets %}
+    <form method="post" action="/admin/pricing/brackets/{{ b.id }}"
+          class="grid grid-cols-12 gap-2 items-center bg-surface-container-low rounded-2xl p-2 ghost-border">
+      <input type="text" name="name" value="{{ b.name }}" required
+             class="col-span-12 md:col-span-3 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <input type="number" name="min_minutes" value="{{ b.min_minutes }}" min="0" step="1" required
+             class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <input type="number" name="max_minutes" value="{{ b.max_minutes }}" min="1" step="1" required
+             class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <input type="number" name="price" value="{{ '%g'|format(b.price) }}" min="0" step="0.01" required
+             class="col-span-4 md:col-span-2 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <input type="number" name="display_order" value="{{ b.display_order }}" min="0" step="1"
+             class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <div class="col-span-4 md:col-span-1 flex justify-center">
+        <input type="checkbox" name="is_active" value="1" {% if b.is_active %}checked{% endif %}
+               class="w-5 h-5 rounded" style="accent-color: var(--accent)"/>
+      </div>
+      <div class="col-span-4 md:col-span-3 flex items-center justify-end gap-2">
+        <button type="submit"
+                class="h-9 px-3 flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-all">
+          <span class="material-symbols-outlined text-base">save</span>
+          <span x-text="$store.app.t('btn_save')">Kaydet</span>
+        </button>
+        <button type="submit" formnovalidate formaction="/admin/pricing/brackets/{{ b.id }}/delete"
+                @click="if (!confirm($store.app.t('pricing_delete_confirm'))) $event.preventDefault()"
+                class="h-9 px-3 flex items-center gap-1 bg-error-container/10 text-error text-xs font-bold rounded-lg hover:bg-error-container/20 transition-all">
+          <span class="material-symbols-outlined text-base">delete</span>
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <div class="px-2 py-8 text-center text-[#8c909f] text-sm" x-text="$store.app.t('pricing_no_brackets')">
+      Henüz ücret dilimi tanımlanmamış.
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Yeni dilim ekle -->
+  <form method="post" action="/admin/pricing/brackets/new"
+        class="grid grid-cols-12 gap-2 items-center mt-4 pt-4 border-t border-outline-variant/10">
+    <input type="text" name="name" required placeholder="Örn: 4-8 Saat"
+           class="col-span-12 md:col-span-3 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    <input type="number" name="min_minutes" min="0" step="1" required placeholder="0"
+           class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    <input type="number" name="max_minutes" min="1" step="1" required placeholder="60"
+           class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    <input type="number" name="price" min="0" step="0.01" required placeholder="0"
+           class="col-span-4 md:col-span-2 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] placeholder:text-[#8c909f] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    <input type="number" name="display_order" min="0" step="1"
+           value="{{ (brackets[-1].display_order + 1) if brackets else 1 }}"
+           class="col-span-4 md:col-span-1 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+    <div class="col-span-4 md:col-span-1 flex justify-center">
+      <input type="checkbox" name="is_active" value="1" checked
+             class="w-5 h-5 rounded" style="accent-color: var(--accent)"/>
+    </div>
+    <div class="col-span-4 md:col-span-3 flex items-center justify-end">
+      <button type="submit"
+              class="h-9 px-4 flex items-center gap-1 bg-primary text-on-primary text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all">
+        <span class="material-symbols-outlined text-base">add</span>
+        <span x-text="$store.app.t('pricing_add_bracket')">Yeni Dilim Ekle</span>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ── Abonelik Fiyatları ────────────────────────────────────────── -->
+<div class="bg-surface-container rounded-3xl p-6 ghost-border">
+  <h3 class="text-sm font-bold text-white mb-1 flex items-center gap-2">
+    <span class="material-symbols-outlined text-tertiary text-base">card_membership</span>
+    <span x-text="$store.app.t('pricing_plans')">Abonelik Fiyatları</span>
+  </h3>
+  <p class="text-xs text-[#8c909f] mb-5" x-text="$store.app.t('pricing_plans_desc')">
+    Abonelik paketlerinin satış fiyatları
+  </p>
+
+  <!-- Tablo başlığı -->
+  <div class="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 text-[10px] font-bold text-[#8c909f] uppercase tracking-widest">
+    <div class="col-span-4" x-text="$store.app.t('lbl_plan')">Plan</div>
+    <div class="col-span-3" x-text="$store.app.t('pricing_plan_duration')">Süre</div>
+    <div class="col-span-3" x-text="$store.app.t('pricing_plan_price')">Fiyat (₺)</div>
+    <div class="col-span-1 text-center" x-text="$store.app.t('pricing_col_active')">Aktif</div>
+    <div class="col-span-1 text-right" x-text="$store.app.t('pricing_col_actions')">İşlem</div>
+  </div>
+
+  <div class="space-y-2">
+    {% for p in plans %}
+    <form method="post" action="/admin/pricing/plans/{{ p.id }}"
+          class="grid grid-cols-12 gap-2 items-center bg-surface-container-low rounded-2xl p-2.5 ghost-border">
+      <div class="col-span-12 md:col-span-4 font-semibold text-sm text-white px-1"
+           x-text="$store.app.planName({{ p.name | tojson }})">{{ pt(p.name) }}</div>
+      <div class="col-span-6 md:col-span-3 text-sm text-[#8c909f] px-1">
+        {% if p.duration_hours < 24 %}
+          {{ p.duration_hours }} <span x-text="$store.app.t('pricing_hours')">saat</span>
+        {% else %}
+          {{ (p.duration_hours / 24) | int }} <span x-text="$store.app.t('pricing_days')">gün</span>
+        {% endif %}
+      </div>
+      <input type="number" name="price" value="{{ '%g'|format(p.price) }}" min="0" step="0.01" required
+             class="col-span-6 md:col-span-3 bg-[#191b22] rounded-lg ghost-border px-2.5 py-2 text-sm text-[#e2e2eb] focus:outline-none focus:ring-1 focus:ring-primary/30"/>
+      <div class="col-span-6 md:col-span-1 flex justify-center">
+        <input type="checkbox" name="is_active" value="1" {% if p.is_active %}checked{% endif %}
+               class="w-5 h-5 rounded" style="accent-color: var(--accent)"/>
+      </div>
+      <div class="col-span-6 md:col-span-1 flex items-center justify-end">
+        <button type="submit"
+                class="h-9 px-3 flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-all">
+          <span class="material-symbols-outlined text-base">save</span>
+        </button>
+      </div>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
